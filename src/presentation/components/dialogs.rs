@@ -1,5 +1,6 @@
 use crate::presentation::{
     design::*,
+    i18n::{Locale, T},
     state::{Overlay, State},
 };
 use ratatui::{
@@ -12,6 +13,38 @@ use ratatui::{
 pub fn render(frame: &mut Frame, state: &mut State) {
     match &mut state.overlay {
         Overlay::None => {}
+        Overlay::Language { selected } => {
+            let area = centered(frame.area(), 64, 13);
+            frame.render_widget(Clear, area);
+            let block = Block::default()
+                .borders(Borders::ALL)
+                .border_style(style(ACCENT))
+                .style(style(TEXT).bg(RAISED))
+                .title(" LANGUAGE / LANGUE ");
+            let inner = block.inner(area);
+            frame.render_widget(block, area);
+            let language = Locale(*selected);
+            let lines = vec![
+                Line::from("Choose your language / Choisis ta langue"),
+                Line::from(""),
+                Line::from("  1  English").style(if language == Locale::EN {
+                    style(CANVAS).bg(ACCENT)
+                } else {
+                    style(MUTED)
+                }),
+                Line::from("  2  Français").style(if language == Locale::FR {
+                    style(CANVAS).bg(ACCENT)
+                } else {
+                    style(MUTED)
+                }),
+                Line::from(""),
+                Line::from("↑↓ select / choisir   Enter save / enregistrer"),
+                Line::from("Esc: continue once / continuer sans enregistrer"),
+                Line::from(""),
+                Line::from("Change anytime: L / portloom language en|fr").style(style(SUBTLE)),
+            ];
+            frame.render_widget(Paragraph::new(lines), inner);
+        }
         Overlay::Help => {
             let area = centered(frame.area(), 76, 19);
             frame.render_widget(Clear, area);
@@ -19,32 +52,14 @@ pub fn render(frame: &mut Frame, state: &mut State) {
                 .borders(Borders::ALL)
                 .border_style(style(ACCENT))
                 .style(style(TEXT).bg(RAISED))
-                .title(" RACCOURCIS ");
+                .title(state.locale.text(T::Shortcuts));
             let inner = block.inner(area);
             frame.render_widget(block, area);
-            let help = [
-                "0 Tous  1 Projets  2 Services  3 Apps  4 Système  5 Inconnus",
-                "Tab          TCP + UDP / TCP / UDP",
-                "↑↓ / PgUp/Dn Choisir un port",
-                "/            Rechercher port, projet, commande ou PID",
-                "Entrée       Ouvrir / quitter le détail",
-                "↑↓ / molette Défiler le détail ou la confirmation",
-                "k            Préparer l’arrêt normal (SIGTERM)",
-                "K            Préparer l’arrêt forcé (SIGKILL)",
-                "O            Confirmer un arrêt de projet",
-                "PID + Entrée Confirmer un arrêt sensible",
-                "Échap        Annuler / fermer / effacer le filtre",
-                "Espace       Pause / reprise des relevés",
-                "r            Actualiser maintenant",
-                "q / Ctrl+C   Quitter",
-                "",
-                "Aucune escalade automatique. Arrêter vise un processus",
-                "et tous ses ports. Échap / ? pour fermer cette aide.",
-            ];
+            let help = state.locale.text(T::Help).lines();
             frame.render_widget(
                 Paragraph::new(
                     help.map(|s| Line::from(fit(s, inner.width as usize)))
-                        .to_vec(),
+                        .collect::<Vec<_>>(),
                 ),
                 inner,
             );
@@ -62,9 +77,9 @@ pub fn render(frame: &mut Frame, state: &mut State) {
                 .border_style(style(color))
                 .style(style(TEXT).bg(RAISED))
                 .title(if plan.force {
-                    " FORCER L’ARRÊT · SIGKILL "
+                    state.locale.text(T::ForceTitle)
                 } else {
-                    " CONFIRMER L’ARRÊT · SIGTERM "
+                    state.locale.text(T::ConfirmTitle)
                 });
             let inner = block.inner(area);
             frame.render_widget(block, area);
@@ -90,15 +105,25 @@ pub fn render(frame: &mut Frame, state: &mut State) {
                 .collect::<Vec<_>>()
                 .join("  ");
             let paragraphs = [
-                plan.assessment.impact.to_string(),
+                state.locale.assessment(&plan.assessment).impact.to_string(),
                 if plan.force {
-                    "SIGKILL ne laisse pas au processus le temps de nettoyer ou d’enregistrer son état.".into()
+                    state.locale.text(T::KillWarning).into()
                 } else {
-                    "SIGTERM demande au processus de se fermer. Aucune escalade automatique.".into()
+                    state.locale.text(T::TermInfo).into()
                 },
-                format!("Tous les ports concernés : {ports}"),
-                format!("Commande : {}", p.command),
-                format!("Dossier : {}", p.cwd.as_deref().unwrap_or("indisponible")),
+                state.locale.format(T::AffectedPorts, &[("ports", &ports)]),
+                state
+                    .locale
+                    .format(T::CommandValue, &[("value", &p.command)]),
+                state.locale.format(
+                    T::DirectoryValue,
+                    &[(
+                        "value",
+                        p.cwd
+                            .as_deref()
+                            .unwrap_or(state.locale.text(T::Unavailable)),
+                    )],
+                ),
             ];
             let lines: Vec<Line<'static>> = paragraphs
                 .iter()
@@ -118,9 +143,11 @@ pub fn render(frame: &mut Frame, state: &mut State) {
             );
             let ready = !state.busy && (!plan.assessment.needs_pid || *input == p.pid.to_string());
             let prompt = if plan.assessment.needs_pid {
-                format!("Saisis le PID {} : {}▏", p.pid, input)
+                state
+                    .locale
+                    .format(T::TypePid, &[("pid", &p.pid.to_string()), ("input", input)])
             } else {
-                "O pour confirmer · Entrée n’envoie aucun signal".into()
+                state.locale.text(T::TypeConfirm).into()
             };
             frame.render_widget(
                 Paragraph::new(fit(&prompt, inner.width as usize)).style(style(if ready {
@@ -132,15 +159,15 @@ pub fn render(frame: &mut Frame, state: &mut State) {
             );
             state.dialog_action = Rect::new(inner.x, inner.bottom() - 2, inner.width, 1);
             let action = if state.busy {
-                "Vérification et arrêt en cours…"
+                state.locale.text(T::Stopping)
             } else if ready {
                 if plan.assessment.needs_pid {
-                    "Entrée · CONFIRMER L’ARRÊT"
+                    state.locale.text(T::EnterConfirm)
                 } else {
-                    "O · CONFIRMER L’ARRÊT"
+                    state.locale.text(T::LetterConfirm)
                 }
             } else {
-                "CONFIRMER · PID exact requis"
+                state.locale.text(T::ExactPid)
             };
             frame.render_widget(
                 Paragraph::new(action).style(
@@ -153,7 +180,7 @@ pub fn render(frame: &mut Frame, state: &mut State) {
                 state.dialog_action,
             );
             frame.render_widget(
-                Paragraph::new("Échap annuler · ↑↓ / molette pour tout lire").style(style(SUBTLE)),
+                Paragraph::new(state.locale.text(T::CancelHint)).style(style(SUBTLE)),
                 Rect::new(inner.x, inner.bottom() - 1, inner.width, 1),
             );
         }

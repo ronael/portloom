@@ -95,6 +95,7 @@ fn categorization_keeps_all_views_explainable() {
     p.project = Some(Project {
         name: "atelier".into(),
         root: "/workspace/atelier".into(),
+        branch: None,
     });
     assert!(assess(&p).title.contains("atelier"));
     assert!(Kind::Web.in_view(1));

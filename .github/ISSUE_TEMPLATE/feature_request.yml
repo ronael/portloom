@@ -1,16 +1,16 @@
-name: Proposition
-description: Proposer une amélioration
+name: Feature request
+description: Suggest an improvement
 body:
   - type: textarea
     id: problem
     attributes:
-      label: Besoin concret
-      description: Décrire la situation et ce qui manque aujourd’hui.
+      label: Concrete need
+      description: Describe the situation and what is missing. English or French is welcome.
     validations:
       required: true
   - type: textarea
     id: solution
     attributes:
-      label: Comportement souhaité
+      label: Desired behavior
     validations:
       required: true

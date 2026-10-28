@@ -1,29 +1,32 @@
-# Contribuer
+# Contributing
 
-Les bugs et propositions sont bienvenus dans les issues. Pour un changement de comportement, décrire le problème, un exemple concret et la validation prévue. Les échanges peuvent être en français ou en anglais.
+Bug reports and feature proposals are welcome through GitHub issues. Describe the problem, a concrete example and how the change can be validated. Discussions may be in English or French.
 
-## Environnement
+## Development
 
-Installer rustup, Node 22 ou plus récent, Python 3 et `lsof`. Le projet fixe Rust dans `rust-toolchain.toml`. Les scripts sélectionnent une éventuelle toolchain locale dans `.tooling` sans modifier les outils globaux. Aucun paquet npm n’est nécessaire au développement.
+Install rustup, Node 22 or newer, Python 3 and `lsof`. `rust-toolchain.toml` pins Rust. Scripts use the optional isolated `.tooling` toolchain without changing global tools. No npm packages are needed for development.
 
 ```sh
 npm run verify
 npm run build
 python3 scripts/dev/terminal_smoke.py
+python3 scripts/dev/language_smoke.py
 npm run pack
 node scripts/release/smoke.mjs
 ```
 
 ## Conventions
 
-- Garder le domaine et les cas d’usage sans accès système ; injecter leurs dépendances par les ports existants ou un nouveau contrat justifié.
-- Conserver au plus dix fichiers directement par dossier de sources ; regrouper par responsabilité.
-- Ajouter un test pour une règle métier ou une régression. Les tests d’intégration ne doivent arrêter que leurs propres fixtures.
-- Préserver les confirmations, protections système, raccourcis et restauration du terminal.
-- Utiliser les tokens du design system pour les composants Ratatui.
-- Mettre à jour les documents si les commandes, plateformes ou comportements publics changent.
-- Ne pas suivre `.tooling`, `dist`, les binaires, les exports de processus réels ou les secrets.
+- Keep domain and application free of system access; inject dependencies through focused ports.
+- Keep at most ten files directly inside each source directory, grouped by responsibility.
+- Test business rules and regressions. Integration tests may only stop their own fixtures.
+- Preserve confirmations, system protections, keyboard access and terminal restoration.
+- Use the existing Ratatui design tokens.
+- English is the default; keep French messages and interpolation fields aligned. Domain decisions must not depend on translated strings. Keep JSON keys stable.
+- Never prompt during installation or in scripts. Persist preferences only after an explicit user action.
+- Update documentation when commands, platforms or public behavior change.
+- Never commit build caches, binaries, real process exports, secrets or personal contact addresses.
 
 ## Pull requests
 
-Expliquer le problème résolu, le comportement obtenu et les vérifications effectuées. Le workflow teste macOS et Linux sur ARM64 et x64. Les mises à jour de dépendances suivent les mêmes contrôles. Les contributions sont proposées sous la licence MIT du projet.
+Explain the problem, resulting behavior and validation. CI tests macOS and Linux on ARM64 and x64; dependency updates follow the same checks. Contributions are covered by the project's MIT license.

@@ -70,7 +70,7 @@ impl PortScanner for LocalScanner {
             let udp = command("lsof", &["-nP", "-iUDP", "-FpcuftPn"]);
             (
                 tcp.join()
-                    .unwrap_or_else(|_| Err("Scan TCP interrompu.".into())),
+                    .unwrap_or_else(|_| Err("TCP scan interrupted.".into())),
                 udp,
             )
         });
@@ -98,9 +98,9 @@ impl PortScanner for LocalScanner {
                 .unwrap_or_default();
             (
                 p.join()
-                    .unwrap_or_else(|_| Err("Lecture ps interrompue.".into())),
+                    .unwrap_or_else(|_| Err("Process reader interrupted.".into())),
                 e.join()
-                    .unwrap_or_else(|_| Err("Lecture des exécutables interrompue.".into())),
+                    .unwrap_or_else(|_| Err("Executable reader interrupted.".into())),
                 cwd,
             )
         });
@@ -131,7 +131,7 @@ impl ProcessControl for LocalControl {
     }
     fn signal(&self, pid: u32, signal: Signal) -> AppResult<()> {
         if pid <= 1 || pid > i32::MAX as u32 {
-            return Err("PID invalide : aucun signal envoyé.".into());
+            return Err("Invalid PID: no signal sent.".into());
         }
         let sig = match signal {
             Signal::Terminate => nix::sys::signal::Signal::SIGTERM,
@@ -139,7 +139,7 @@ impl ProcessControl for LocalControl {
         };
         match nix::sys::signal::kill(nix::unistd::Pid::from_raw(pid as i32), sig) {
             Ok(()) | Err(nix::errno::Errno::ESRCH) => Ok(()),
-            Err(e) => Err(format!("Signal refusé pour le PID {pid} : {e}.")),
+            Err(e) => Err(format!("Signal rejected for PID {pid}: {e}.").into()),
         }
     }
 }

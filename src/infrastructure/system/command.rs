@@ -13,7 +13,7 @@ fn read_limited(stream: impl Read) -> Result<Vec<u8>, String> {
         .read_to_end(&mut bytes)
         .map_err(|e| e.to_string())?;
     if bytes.len() as u64 > MAX_BYTES {
-        return Err("Sortie système trop volumineuse.".into());
+        return Err("System output exceeds the size limit.".into());
     }
     Ok(bytes)
 }
@@ -25,9 +25,7 @@ pub fn command(program: &str, args: &[&str]) -> AppResult<String> {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| {
-            format!("Impossible de lancer {program} : {e}. Vérifie son installation et le PATH.")
-        })?;
+        .map_err(|e| format!("Cannot start {program}: {e}. Check its installation and PATH."))?;
     let stdout = child.stdout.take().expect("piped stdout");
     let stderr = child.stderr.take().expect("piped stderr");
     let out = thread::spawn(move || read_limited(stdout));
@@ -42,13 +40,13 @@ pub fn command(program: &str, args: &[&str]) -> AppResult<String> {
                 let _ = child.wait();
                 break Err(match state {
                     Err(e) => format!("{program} : {e}"),
-                    _ => format!("{program} : délai de lecture de 4 s dépassé."),
+                    _ => format!("{program} : scan exceeded the 4 s deadline."),
                 });
             }
         }
     };
-    let stdout = out.join().map_err(|_| "Lecture stdout interrompue.")??;
-    let stderr = err.join().map_err(|_| "Lecture stderr interrompue.")??;
+    let stdout = out.join().map_err(|_| "stdout reader interrupted.")??;
+    let stderr = err.join().map_err(|_| "stderr reader interrupted.")??;
     let status = status?;
     let stdout = String::from_utf8_lossy(&stdout).into_owned();
     let stderr = String::from_utf8_lossy(&stderr);
@@ -60,10 +58,11 @@ pub fn command(program: &str, args: &[&str]) -> AppResult<String> {
         Err(format!(
             "{program} : {}",
             if stderr.trim().is_empty() {
-                format!("échec ({status})")
+                format!("failed ({status})")
             } else {
                 stderr.trim().to_string()
             }
-        ))
+        )
+        .into())
     }
 }

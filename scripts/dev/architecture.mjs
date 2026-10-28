@@ -9,7 +9,7 @@ const skip = new Set(['node_modules', '.git', '.tooling', 'target', 'dist', 'bin
 const errors = [];
 function walk(directory) {
   const entries = readdirSync(directory, {withFileTypes: true});
-  const files = entries.filter(entry => entry.isFile());
+  const files = entries.filter(entry => entry.isFile() && !skip.has(entry.name));
   if (files.length > 10) errors.push(`${path.relative(root, directory) || '.'}: ${files.length} fichiers (maximum 10)`);
   for (const file of files.filter(file => file.name.endsWith('.rs'))) {
     const filename = path.join(directory, file.name);

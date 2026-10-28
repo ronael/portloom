@@ -14,3 +14,6 @@
 - La racine npm est privée ; seule l’archive construite dans `dist/npm` est destinée à publication. Ne jamais publier implicitement.
 - Les archives locales éventuelles dans `.tooling/legacy-typescript` et les rapports dans `.tooling/verification-history` ne font pas partie du dépôt public. Ne pas les supprimer ni les publier.
 - Les contacts publics du mainteneur passent par les issues et le signalement privé GitHub ; ne pas ajouter d’adresse personnelle.
+- Anglais par défaut ; traductions anglais/français dans presentation/i18n. Le domaine transporte des raisons typées, jamais des messages localisés. Garder les noms de champs JSON stables.
+- Le choix de langue intervient au premier lancement interactif, jamais à l’installation npm. Aucun prompt en script, CI, JSON ou démo ; ne rien enregistrer sans action explicite.
+- HTTP est une action explicite limitée aux adresses numériques loopback : HEAD, délai réseau total de deux secondes, en-têtes bornés, aucun suivi de redirection ni détection HTTPS implicite. Revalider le propriétaire avant une ouverture navigateur.

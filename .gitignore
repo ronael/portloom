@@ -1,4 +1,4 @@
-/.tooling/
+/.tooling
 /target/
 /dist/
 /bin/

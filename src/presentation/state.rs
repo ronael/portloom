@@ -1,3 +1,8 @@
+use super::{
+    grouping::{self, VisibleRow},
+    i18n::{Locale, T},
+};
+use crate::application::{preferences::Language, web::WebReport};
 use crate::{
     application::stop::{StopPlan, StopResult},
     domain::{
@@ -8,11 +13,15 @@ use crate::{
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{layout::Rect, widgets::TableState};
+use std::collections::{BTreeMap, BTreeSet};
 #[derive(Default)]
 pub enum Overlay {
     #[default]
     None,
     Help,
+    Language {
+        selected: Language,
+    },
     Confirm {
         plan: Box<StopPlan>,
         input: String,
@@ -25,9 +34,17 @@ pub enum Action {
     Refresh,
     Prepare(Box<Endpoint>, bool),
     Execute(Box<StopPlan>, String),
+    Web(Box<Endpoint>, bool),
+    Language(Language),
 }
 pub struct State {
     pub snapshot: Snapshot,
+    pub locale: Locale,
+    pub grouped: bool,
+    pub collapsed: BTreeSet<String>,
+    pub rows: Vec<VisibleRow>,
+    pub fixed_port: Option<u16>,
+    pub web_reports: BTreeMap<String, WebReport>,
     pub actor: Actor,
     pub demo: bool,
     pub view: u8,
@@ -56,6 +73,12 @@ impl State {
     pub fn new(actor: Actor, demo: bool) -> Self {
         Self {
             snapshot: Snapshot::default(),
+            locale: Locale::EN,
+            grouped: false,
+            collapsed: BTreeSet::new(),
+            rows: vec![],
+            fixed_port: None,
+            web_reports: BTreeMap::new(),
             actor,
             demo,
             view: 0,
@@ -69,7 +92,7 @@ impl State {
             overlay: Overlay::None,
             visible: vec![],
             table: TableState::default(),
-            notice: "Lecture des ports…".into(),
+            notice: Locale::EN.text(T::Reading).into(),
             error: false,
             too_small: false,
             stale: false,
@@ -81,31 +104,49 @@ impl State {
             page_size: 10,
         }
     }
-    pub fn selected(&self) -> Option<&Endpoint> {
-        self.table
-            .selected()
-            .and_then(|i| self.visible.get(i))
-            .and_then(|i| self.snapshot.endpoints.get(*i))
+    pub fn selected_row(&self) -> Option<&VisibleRow> {
+        self.table.selected().and_then(|i| self.rows.get(i))
     }
-    pub fn apply(&mut self, snapshot: Snapshot) {
-        let selected = self.selected().map(|e| e.id.clone());
-        self.history.push(snapshot.endpoints.len() as u64);
-        if self.history.len() > 50 {
-            self.history.remove(0);
+    pub fn selected(&self) -> Option<&Endpoint> {
+        match self.selected_row()? {
+            VisibleRow::Endpoint(index) => self.snapshot.endpoints.get(*index),
+            VisibleRow::Group(_) => None,
         }
-        self.snapshot = snapshot;
-        self.stale = false;
-        self.rebuild();
-        if let Some(id) = selected
+    }
+    fn selection_key(&self) -> Option<String> {
+        self.selected_row().map(|row| row.key(&self.snapshot))
+    }
+    fn restore_selection(&mut self, key: Option<String>) {
+        if let Some(key) = key
             && let Some(index) = self
-                .visible
+                .rows
                 .iter()
-                .position(|i| self.snapshot.endpoints[*i].id == id)
+                .position(|row| row.key(&self.snapshot) == key)
         {
             self.table.select(Some(index));
         }
     }
+    pub fn apply(&mut self, snapshot: Snapshot) {
+        let selected = self.selection_key();
+        self.history.push(snapshot.endpoints.len() as u64);
+        if self.history.len() > 50 {
+            self.history.remove(0);
+        }
+        self.web_reports.retain(|id, report| {
+            snapshot.endpoints.iter().any(|e| {
+                e.id == *id
+                    && crate::domain::model::same_process(&e.process, &report.endpoint.process)
+                    && e.addresses == report.endpoint.addresses
+            })
+        });
+        self.snapshot = snapshot;
+        self.rows.clear();
+        self.stale = false;
+        self.rebuild();
+        self.restore_selection(selected);
+    }
     pub fn rebuild(&mut self) {
+        let selection = self.selection_key();
         let q = self.query.to_lowercase();
         self.visible = self
             .snapshot
@@ -115,6 +156,7 @@ impl State {
             .filter(|(_, e)| {
                 let a = assess(&e.process);
                 a.kind.in_view(self.view)
+                    && self.fixed_port.is_none_or(|port| port == e.port)
                     && (self.protocol == 0
                         || (self.protocol == 1 && e.protocol == Protocol::Tcp)
                         || (self.protocol == 2 && e.protocol == Protocol::Udp))
@@ -128,7 +170,7 @@ impl State {
                             e.process.command,
                             e.process.cwd.as_deref().unwrap_or(""),
                             a.title,
-                            a.label,
+                            self.locale.assessment(&a).label,
                             e.addresses.join(" ")
                         )
                         .to_lowercase()
@@ -140,26 +182,29 @@ impl State {
             let e = &self.snapshot.endpoints[*i];
             (assess(&e.process).kind, e.port, e.process.pid)
         });
-        self.table.select(if self.visible.is_empty() {
+        self.rows = grouping::rows(
+            &self.snapshot,
+            &self.visible,
+            self.grouped,
+            &self.collapsed,
+            !q.is_empty(),
+        );
+        self.table.select(if self.rows.is_empty() {
             None
         } else {
-            Some(
-                self.table
-                    .selected()
-                    .unwrap_or(0)
-                    .min(self.visible.len() - 1),
-            )
+            Some(self.table.selected().unwrap_or(0).min(self.rows.len() - 1))
         });
+        self.restore_selection(selection);
         self.detail_scroll = 0;
     }
     pub fn move_selection(&mut self, delta: isize) {
-        if self.visible.is_empty() {
+        if self.rows.is_empty() {
             return;
         }
         let current = self.table.selected().unwrap_or(0);
         let next = current
             .saturating_add_signed(delta)
-            .min(self.visible.len() - 1);
+            .min(self.rows.len() - 1);
         self.table.select(Some(next));
         self.detail_scroll = 0;
     }
@@ -168,34 +213,70 @@ impl State {
         self.error = error;
     }
     pub fn stop_result(&mut self, result: StopResult) {
+        let key = match result {
+            StopResult::Stopped if self.demo => T::DemoStopped,
+            StopResult::Stopped => T::Stopped,
+            StopResult::Gone => T::Gone,
+            StopResult::Running => T::StillRunning,
+        };
+        self.message(self.locale.text(key), result == StopResult::Running);
+    }
+    pub fn set_language(&mut self, language: Language) {
+        self.locale = Locale(language);
+        self.overlay = Overlay::None;
+        self.message(self.locale.text(T::LanguageSaved), false);
+        self.rebuild();
+    }
+    pub fn web(&mut self, open: bool) -> Action {
+        if self.busy {
+            self.message(self.locale.text(T::Busy), false);
+            return Action::None;
+        }
+        if let Some(endpoint) = self.selected().cloned() {
+            self.web_reports.remove(&endpoint.id);
+            return Action::Web(Box::new(endpoint), open);
+        }
+        self.message(self.locale.text(T::GroupHint), false);
+        Action::None
+    }
+    pub fn web_result(&mut self, report: WebReport) {
+        let response = &report.response;
+        let key = if report.opened {
+            if response.simulated {
+                T::DemoOpened
+            } else {
+                T::Opened
+            }
+        } else {
+            T::HttpResult
+        };
         self.message(
-            match result {
-                StopResult::Stopped => {
-                    if self.demo {
-                        "Simulation : processus arrêté."
-                    } else {
-                        "Processus arrêté."
-                    }
-                }
-                StopResult::Gone => "Le processus ou le port a déjà disparu.",
-                StopResult::Running => {
-                    "Signal envoyé, processus toujours présent. Aucun arrêt forcé automatique."
-                }
-            },
-            result == StopResult::Running,
+            self.locale.format(
+                key,
+                &[
+                    ("url", &response.target.url()),
+                    ("status", &response.status.to_string()),
+                    ("ms", &response.elapsed_ms.to_string()),
+                ],
+            ),
+            false,
         );
+        self.web_reports.insert(report.endpoint.id.clone(), report);
     }
     pub fn prepare(&mut self, force: bool) -> Action {
         if self.busy {
-            self.message("Lecture en cours, réessaie dans un instant.", false);
+            self.message(self.locale.text(T::Busy), false);
             return Action::None;
         }
         if let Some(e) = self.selected() {
             if let Some(reason) = blocked(&e.process, &self.actor) {
-                self.message(reason, true);
+                self.message(self.locale.error(&reason), true);
             } else {
                 return Action::Prepare(Box::new(e.clone()), force);
             }
+        }
+        if self.selected().is_none() {
+            self.message(self.locale.text(T::GroupHint), false);
         }
         Action::None
     }
@@ -221,6 +302,23 @@ impl State {
                 Action::None
             };
         }
+        if let Overlay::Language { selected } = &mut self.overlay {
+            match key.code {
+                KeyCode::Up | KeyCode::Down | KeyCode::Tab => {
+                    *selected = if *selected == Language::English {
+                        Language::French
+                    } else {
+                        Language::English
+                    };
+                }
+                KeyCode::Char('1') => *selected = Language::English,
+                KeyCode::Char('2') => *selected = Language::French,
+                KeyCode::Enter if !self.busy => return Action::Language(*selected),
+                KeyCode::Esc => self.overlay = Overlay::None,
+                _ => {}
+            }
+            return Action::None;
+        }
         if let Overlay::Confirm {
             plan,
             input,
@@ -230,7 +328,7 @@ impl State {
             match key.code {
                 KeyCode::Esc if !self.busy => {
                     self.overlay = Overlay::None;
-                    self.message("Arrêt annulé.", false);
+                    self.message(self.locale.text(T::Cancelled), false);
                 }
                 KeyCode::Char(c)
                     if plan.assessment.needs_pid && c.is_ascii_digit() && input.len() < 10 =>
@@ -243,7 +341,12 @@ impl State {
                 KeyCode::Down | KeyCode::PageDown => *scroll = scroll.saturating_add(3),
                 KeyCode::Up | KeyCode::PageUp => *scroll = scroll.saturating_sub(3),
                 KeyCode::Enter if plan.assessment.needs_pid => return self.confirm(),
-                KeyCode::Char('o' | 'O') if !plan.assessment.needs_pid => return self.confirm(),
+                KeyCode::Char(c)
+                    if !plan.assessment.needs_pid
+                        && c.to_ascii_lowercase() == self.locale.confirm_key() =>
+                {
+                    return self.confirm();
+                }
                 _ => {}
             }
             return Action::None;
@@ -289,6 +392,9 @@ impl State {
             KeyCode::Char('0'..='5') => {
                 if let KeyCode::Char(c) = key.code {
                     self.view = c as u8 - b'0';
+                    if self.view == 1 {
+                        self.grouped = true;
+                    }
                     self.rebuild();
                 }
             }
@@ -300,19 +406,50 @@ impl State {
                 self.paused = !self.paused;
                 self.message(
                     if self.paused {
-                        "Rafraîchissement en pause."
+                        self.locale.text(T::Paused)
                     } else {
-                        "Rafraîchissement repris."
+                        self.locale.text(T::Resumed)
                     },
                     false,
                 );
+            }
+            KeyCode::Char('g') => {
+                self.grouped = !self.grouped;
+                self.rebuild();
+                self.message(
+                    self.locale.text(if self.grouped {
+                        T::GroupToggle
+                    } else {
+                        T::FlatToggle
+                    }),
+                    false,
+                );
+            }
+            KeyCode::Char('w') => return self.web(false),
+            KeyCode::Char('o') => return self.web(true),
+            KeyCode::Char('L') => {
+                self.overlay = Overlay::Language {
+                    selected: self.locale.0,
+                }
             }
             KeyCode::Char('r') => return Action::Refresh,
             KeyCode::Char('k') => return self.prepare(false),
             KeyCode::Char('K') => return self.prepare(true),
             KeyCode::Enter => {
-                self.detail = !self.detail;
-                self.detail_scroll = 0;
+                if let Some(VisibleRow::Group(group)) = self.selected_row() {
+                    let root = group.root.clone();
+                    if !self.collapsed.remove(&root) {
+                        if self.collapsed.len() >= 256 {
+                            self.collapsed.pop_first();
+                        }
+                        self.collapsed.insert(root);
+                    }
+                    self.detail = false;
+                    self.rebuild();
+                } else {
+                    self.detail = !self.detail;
+                    self.detail_scroll = 0;
+                }
             }
             KeyCode::Char('?') => self.overlay = Overlay::Help,
             KeyCode::Down | KeyCode::Char('j') if self.detail => {
@@ -332,7 +469,7 @@ impl State {
             KeyCode::Home => {
                 self.table.select(Some(0));
             }
-            KeyCode::End => self.table.select(self.visible.len().checked_sub(1)),
+            KeyCode::End => self.table.select(self.rows.len().checked_sub(1)),
             _ => {}
         }
         Action::None

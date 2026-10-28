@@ -583,7 +583,7 @@ checksum = "05c8b63e8d9609db387f0324918f81d68fe27748f084ef092fb35954d0539a85"
 
 [[package]]
 name = "portloom"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "clap",
  "clap_complete",
@@ -601,14 +601,14 @@ dependencies = [
 
 [[package]]
 name = "portloom-application"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "portloom-domain",
 ]
 
 [[package]]
 name = "portloom-domain"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "regex",
 ]

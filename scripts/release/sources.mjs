@@ -21,5 +21,25 @@ export function includeSources(root, stage) {
   }
   collect(destination);
   if (!sourceFiles.includes('src/main.rs') || !sourceFiles.includes('Cargo.lock')) throw new Error('Sources Rust incomplètes.');
-  writeFileSync(path.join(destination, 'README.md'), `# Sources de Portloom\n\nLes sources Rust de cette version sont distribuées sous MIT.\n\n## Compiler\n\nAvec rustup installé, la chaîne est définie par rust-toolchain.toml :\n\n\x60\x60\x60sh\ncargo build --locked --release --bin portloom\n./target/release/portloom --demo\n\x60\x60\x60\n\nmacOS ou Linux requis ; le scanner utilise lsof et ps. Pour les tests : Python 3 est requis pour la fixture réseau ; cargo test --locked --workspace --all-targets. Les tests n’arrêtent que leurs propres fixtures.\n\nLes dossiers locaux, dépendances de compilation, anciennes versions et données du poste ne font pas partie de ces sources.\n`);
+  writeFileSync(path.join(destination, 'README.md'), `# Portloom source
+
+This release includes the Rust source under the MIT license.
+
+## Build
+
+Install rustup; rust-toolchain.toml selects the toolchain:
+
+\x60\x60\x60sh
+cargo build --locked --release --bin portloom
+./target/release/portloom --demo
+\x60\x60\x60
+
+macOS or Linux is required. The scanner uses lsof and ps. Tests also need Python 3 for network fixtures:
+
+\x60\x60\x60sh
+cargo test --locked --workspace --all-targets
+\x60\x60\x60
+
+Tests only stop their own fixtures. No build caches, historical versions or local machine data are included.
+`);
 }

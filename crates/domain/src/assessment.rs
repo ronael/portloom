@@ -35,14 +35,33 @@ impl Kind {
     }
 }
 #[derive(Clone, Debug)]
+pub enum Evidence {
+    Root,
+    System(String),
+    Database(String),
+    Service(String),
+    Application(String),
+    Agent,
+    Web(String),
+    Project { runtime: String, root: String },
+    Unknown,
+}
+#[derive(Clone, Debug)]
 pub struct Assessment {
     pub kind: Kind,
-    pub label: &'static str,
-    pub badge: &'static str,
     pub title: String,
-    pub reason: String,
-    pub impact: &'static str,
+    pub evidence: Evidence,
     pub needs_pid: bool,
+}
+impl Assessment {
+    fn new(kind: Kind, title: String, evidence: Evidence) -> Self {
+        Self {
+            kind,
+            title,
+            evidence,
+            needs_pid: !matches!(kind, Kind::Web | Kind::Development),
+        }
+    }
 }
 static WEB: LazyLock<Vec<(&str, Regex)>> = LazyLock::new(|| {
     [
@@ -85,16 +104,6 @@ pub fn assess(p: &ProcessInfo) -> Assessment {
         .to_lowercase();
     let name = p.name.to_lowercase();
     let has = |names: &[&str]| names.contains(&binary.as_str()) || names.contains(&name.as_str());
-    let result =
-        |kind, label, badge, title: String, reason: String, impact, needs_pid| Assessment {
-            kind,
-            label,
-            badge,
-            title,
-            reason,
-            impact,
-            needs_pid,
-        };
     if p.uid == 0
         || [
             "/System/Library/",
@@ -124,21 +133,18 @@ pub fn assess(p: &ProcessInfo) -> Assessment {
             "systemd",
         ])
     {
-        return result(
+        return Assessment::new(
             Kind::System,
-            "Service système",
-            "SYSTÈME",
             p.name.clone(),
             if p.uid == 0 {
-                "Processus exécuté par le compte système root.".into()
+                Evidence::Root
             } else {
-                format!(
-                    "Programme système reconnu : {}.",
-                    if exe.is_empty() { &p.name } else { exe }
-                )
+                Evidence::System(if exe.is_empty() {
+                    p.name.clone()
+                } else {
+                    exe.into()
+                })
             },
-            "À conserver : réseau, partage ou fonctionnement du système. Arrêt bloqué dans Portloom.",
-            true,
         );
     }
     for (names, title) in [
@@ -150,39 +156,27 @@ pub fn assess(p: &ProcessInfo) -> Assessment {
         (&["memcached"][..], "Memcached"),
     ] {
         if has(names) {
-            return result(
+            return Assessment::new(
                 Kind::Database,
-                "Base de données / cache",
-                "BASE",
                 title.into(),
-                format!("Moteur reconnu : {}.", p.name),
-                "Arrête la base ou le cache. Plusieurs projets peuvent en dépendre.",
-                true,
+                Evidence::Database(p.name.clone()),
             );
         }
     }
     for (names, title) in [
         (&["com.docker.backend", "dockerd"][..], "Docker"),
-        (&["containerd"][..], "Conteneurs"),
+        (&["containerd"][..], "containerd"),
         (&["colima"][..], "Colima"),
-        (&["vpnkit"][..], "Réseau Docker"),
+        (&["vpnkit"][..], "Docker network"),
         (&["nginx"][..], "Nginx"),
         (&["httpd"][..], "Apache"),
         (&["caddy"][..], "Caddy"),
     ] {
         if has(names) {
-            return result(
+            return Assessment::new(
                 Kind::Service,
-                "Service partagé",
-                "SERVICE",
                 title.into(),
-                format!("Service reconnu : {}.", p.name),
-                if title.contains("Docker") {
-                    "Ce backend peut servir plusieurs conteneurs. Préfère arrêter le conteneur concerné dans Docker."
-                } else {
-                    "Peut servir plusieurs projets ou applications. Vérifie ses dépendances avant de l’arrêter."
-                },
-                true,
+                Evidence::Service(p.name.clone()),
             );
         }
     }
@@ -191,14 +185,10 @@ pub fn assess(p: &ProcessInfo) -> Assessment {
         let runtime_app = (app == "Python" && exe.contains("/Python.framework/"))
             || (app == "Electron" && exe.contains("/node_modules/"));
         if !runtime_app {
-            return result(
+            return Assessment::new(
                 Kind::Application,
-                "Application installée",
-                "APPLI",
                 app.into(),
-                format!("Exécutable rattaché à {app}.app."),
-                "Peut interrompre une application ou une de ses fonctions. Préfère la quitter depuis son interface.",
-                true,
+                Evidence::Application(app.into()),
             );
         }
     }
@@ -215,41 +205,28 @@ pub fn assess(p: &ProcessInfo) -> Assessment {
         .iter()
         .any(|s| exe.contains(s))
     {
-        return result(
-            Kind::Application,
-            "Outil / agent en cours",
-            "APPLI",
-            p.name.clone(),
-            "Nom ou chemin correspondant à un outil de travail.".into(),
-            "Peut interrompre une tâche, un éditeur ou un périphérique en cours d’utilisation.",
-            true,
-        );
+        return Assessment::new(Kind::Application, p.name.clone(), Evidence::Agent);
     }
     if let Some((tool, _)) = WEB.iter().find(|(_, re)| re.is_match(&p.command)) {
-        return result(
+        return Assessment::new(
             Kind::Web,
-            "Site / API probable",
-            "SITE/API",
             p.project
                 .as_ref()
                 .map_or_else(|| tool.to_string(), |pr| format!("{} · {tool}", pr.name)),
-            format!("Commande {tool} reconnue. HTTP n’a pas été testé."),
-            "Arrête ce serveur et tous ses ports. Les pages ou API associées deviendront indisponibles.",
-            false,
+            Evidence::Web(tool.to_string()),
         );
     }
     if let Some(pr) = &p.project
         && (RUNTIME.is_match(&binary) || RUNTIME.is_match(&name))
     {
-        return result(
+        return Assessment::new(
             Kind::Development,
-            "Projet de développement probable",
-            "PROJET",
             pr.name.clone(),
-            format!("Runtime {} dans le dossier de projet {}.", p.name, pr.root),
-            "Arrête ce processus du projet : serveur, worker ou outil de développement.",
-            false,
+            Evidence::Project {
+                runtime: p.name.clone(),
+                root: pr.root.clone(),
+            },
         );
     }
-    result(Kind::Unknown, "Usage à identifier", "INCONNU", p.name.clone(), "Indices insuffisants. Le runtime ou le numéro du port ne prouvent pas qu’il s’agit d’un site.".into(), "Consulte la commande et le dossier avant tout arrêt. Ce processus peut servir à une autre application.", true)
+    Assessment::new(Kind::Unknown, p.name.clone(), Evidence::Unknown)
 }

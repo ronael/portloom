@@ -1,5 +1,5 @@
 use crate::domain::model::{ProcessInfo, Snapshot};
-pub type AppResult<T> = Result<T, String>;
+pub type AppResult<T> = Result<T, crate::domain::issue::Issue>;
 pub trait PortScanner: Send + Sync {
     fn scan(&self) -> AppResult<Snapshot>;
 }

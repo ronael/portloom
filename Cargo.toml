@@ -42,7 +42,7 @@ unicode-width = "0.2"
 unicode-segmentation = "1.12"
 
 [target.'cfg(unix)'.dependencies]
-nix = { version = "0.30", features = ["signal", "process", "user"] }
+nix = { version = "0.31", features = ["signal", "process", "user"] }
 
 [profile.release]
 lto = "thin"

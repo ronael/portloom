@@ -14,6 +14,7 @@ pub enum Pose {
     #[default]
     Still,
     Blink,
+    Wink,
     LookLeft,
     LookRight,
     WaveHigh,
@@ -42,6 +43,7 @@ impl AvatarFrame {
             Mood::Idle if motion => match elapsed_ms % 10_000 {
                 0..160 | 320..480 | 640..800 => Pose::WaveLow,
                 160..320 | 480..640 => Pose::WaveHigh,
+                800..1100 => Pose::Wink,
                 3200..3320 | 3440..3560 => Pose::Blink,
                 6000..6400 => Pose::LookLeft,
                 6800..7200 => Pose::LookRight,

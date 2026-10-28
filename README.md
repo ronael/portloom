@@ -16,10 +16,10 @@ npm install --global portloom
 portloom
 ```
 
-The features below require **1.1.0 or later**. Check `npm view portloom version`; if the registry has an older version, download `portloom-1.1.0.tgz` from [GitHub Releases](https://github.com/ronael/portloom/releases) and install it directly:
+The features below require **1.1.0 or later**; Pip's refreshed design requires **1.1.1**. Check `npm view portloom version`; if the registry has an older version, download `portloom-1.1.1.tgz` from [GitHub Releases](https://github.com/ronael/portloom/releases) and install it directly:
 
 ```sh
-npm install --global ./portloom-1.1.0.tgz
+npm install --global ./portloom-1.1.1.tgz
 ```
 
 Native `.tar.gz` downloads also work without npm: extract the archive for your platform and run `./portloom`. The npm launcher uses `exec`; no Node or Bun process stays in memory. There are no install scripts, extra downloads or compilation during installation.
@@ -45,7 +45,7 @@ Precedence: **`--lang` → `PORTLOOM_LANG` → saved preference → English**. P
 - Project groups keyed by their full directory, with the Git branch when available. Press `1` for projects or `g` to toggle grouping; Enter expands or collapses a group. Group headers never stop multiple processes.
 - An inspector with command, executable, directory, addresses, CPU, memory and every port owned by the process.
 - Search across ports, PIDs, commands, directories and project names. Keyboard and mouse support, scrollable details and JSON output.
-- Meet **Pip**, the filled pixel companion in the header: a bevelled shell, antenna, waving arm, blinking eyes and little contact-pin feet. It reacts to scans and pauses while preserving the port table's height. Press `a` to pause its animations, or start with `--no-motion` / `PORTLOOM_NO_MOTION=1` for a still character.
+- Meet **Pip**, the filled pixel companion in the header: a rounded shell, expressive inset eyes and little contact-pin feet. A short wave ends with a wink; quiet blinks and glances bring it to life between scans. It reacts to scans and pauses while preserving the port table's height. Press `a` to pause its animations, or start with `--no-motion` / `PORTLOOM_NO_MOTION=1` for a still character.
 
 ![Expandable project groups](docs/assets/projects.png)
 

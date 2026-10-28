@@ -13,7 +13,7 @@ npm install --global portloom
 portloom
 ```
 
-Les fonctions ci-dessous nécessitent **1.1.0 ou plus récent**. Vérifie `npm view portloom version` ; si le registre distribue une version plus ancienne, télécharge `portloom-1.1.0.tgz` dans les [releases GitHub](https://github.com/ronael/portloom/releases), puis installe-la avec `npm install --global ./portloom-1.1.0.tgz`.
+Les fonctions ci-dessous nécessitent **1.1.0 ou plus récent** ; le nouveau dessin de Pip nécessite **1.1.1**. Vérifie `npm view portloom version` ; si le registre distribue une version plus ancienne, télécharge `portloom-1.1.1.tgz` dans les [releases GitHub](https://github.com/ronael/portloom/releases), puis installe-la avec `npm install --global ./portloom-1.1.1.tgz`.
 
 Les archives natives `.tar.gz` permettent aussi de lancer `./portloom` sans npm. Aucun processus Node ou Bun ne reste en mémoire ; aucun script, téléchargement supplémentaire ou compilation n’est exécuté à l’installation.
 
@@ -34,7 +34,7 @@ Priorité : **`--lang` → `PORTLOOM_LANG` → préférence enregistrée → ang
 
 ## Projets, sites et commandes
 
-**Pip**, la mascotte en pixels pleins, accompagne l’en-tête : coque en relief, antenne, petit signe de la main, yeux qui clignent et pieds en forme de broches. Elle réagit aux relevés et à la pause, sans réduire la hauteur du tableau. La touche `a` fige ou reprend les animations ; `--no-motion` ou `PORTLOOM_NO_MOTION=1` permet de démarrer avec un personnage immobile.
+**Pip**, la mascotte en pixels pleins, accompagne l’en-tête : coque arrondie, yeux expressifs et petits pieds en forme de broches. Son salut se termine par un clin d’œil ; quelques clignements et regards animent les moments calmes. Elle réagit aux relevés et à la pause, sans réduire la hauteur du tableau. La touche `a` fige ou reprend les animations ; `--no-motion` ou `PORTLOOM_NO_MOTION=1` permet de démarrer avec un personnage immobile.
 
 La touche `1` affiche les projets regroupés ; `g` active ou désactive le regroupement dans les autres vues. Entrée déplie ou replie un projet. Le regroupement utilise son dossier complet et affiche la branche Git lorsqu’elle est disponible. Une ligne de groupe ne déclenche jamais un arrêt collectif.
 

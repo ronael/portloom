@@ -13,6 +13,14 @@ pub const ACCENT: Color = Color::Rgb(121, 219, 200);
 pub const SUCCESS: Color = Color::Rgb(163, 217, 165);
 pub const WARNING: Color = Color::Rgb(242, 196, 123);
 pub const DANGER: Color = Color::Rgb(242, 143, 149);
+pub fn mascot_shadow(body: Color) -> Color {
+    if let (Color::Rgb(r, g, b), Color::Rgb(cr, cg, cb)) = (body, CANVAS) {
+        let channel = |base, canvas| ((u16::from(base) * 2 + u16::from(canvas)) / 3) as u8;
+        Color::Rgb(channel(r, cr), channel(g, cg), channel(b, cb))
+    } else {
+        body
+    }
+}
 pub fn style(color: Color) -> Style {
     Style::default().fg(color)
 }

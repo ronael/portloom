@@ -19,7 +19,10 @@ def run_case(exit_kind):
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 40, 140, 0, 0))
     original = termios.tcgetattr(slave)
     start = time.monotonic()
-    proc = subprocess.Popen([str(ROOT / 'bin/portloom'), '--demo', '--lang', 'en'], stdin=slave,
+    args = [str(ROOT / 'bin/portloom'), '--demo', '--lang', 'en']
+    if exit_kind == 'keyboard-still':
+        args.append('--no-motion')
+    proc = subprocess.Popen(args, stdin=slave,
                             stdout=slave, stderr=slave, start_new_session=True,
                             env={**os.environ, 'TERM': 'xterm-256color', 'COLORTERM': 'truecolor'})
     data = bytearray()
@@ -44,7 +47,7 @@ def run_case(exit_kind):
         first_frame_ms = round((time.monotonic() - start) * 1000, 2)
         process = subprocess.check_output(['ps', '-p', str(proc.pid), '-o', 'rss=,comm='], text=True).strip().split(None, 1)
         assert Path(process[1]).name == 'portloom', process
-        if exit_kind == 'keyboard':
+        if exit_kind.startswith('keyboard'):
             data.clear()
             os.write(master, b'k')
             expect(b'CONFIRM STOP')
@@ -52,9 +55,13 @@ def run_case(exit_kind):
             # Ratatui sends only changed cells, so unchanged letters are absent.
             expect(b'Simulat')
             expect(b'9 ports ')
-            os.write(master, b'q')
+            os.write(master, b'q ' if exit_kind == 'keyboard-skip' else b'q')
         elif exit_kind == 'ctrl-c':
             os.write(master, b'\x03')
+        elif exit_kind == 'signal-during-farewell':
+            os.write(master, b'q')
+            time.sleep(0.15)
+            proc.send_signal(signal.SIGTERM)
         else:
             proc.send_signal(signal.SIGTERM)
         # Keep draining: a PTY writer otherwise blocks on its finite output buffer.
@@ -81,5 +88,7 @@ def run_case(exit_kind):
 
 
 if __name__ == '__main__':
-    results = [run_case(case) for case in ['keyboard', 'ctrl-c', 'sigterm']]
+    results = [run_case(case) for case in [
+        'keyboard', 'keyboard-still', 'keyboard-skip', 'ctrl-c', 'sigterm', 'signal-during-farewell'
+    ]]
     print(json.dumps(results, indent=2))

@@ -11,7 +11,7 @@ python3 scripts/dev/terminal_smoke.py
 python3 scripts/dev/language_smoke.py
 npm run pack
 node scripts/release/smoke.mjs
-npm publish ./dist/npm/portloom-1.1.1.tgz --dry-run --access public
+npm publish ./dist/npm/portloom-1.1.2.tgz --dry-run --access public
 ```
 
 The packer reads the shared Cargo version and `distribution/npm/metadata.json`. It verifies each binary's version and SHA-256, dependency notices and advertised platforms, then generates the manifest from an allowlist of fields and files. The English package README lists only included platforms and links to French documentation.
@@ -34,7 +34,7 @@ The GitHub workflow builds and tests each target natively, then combines all fou
 Verify the source commit, successful CI and final archive checksum before publishing. Never rebuild different sources under an existing release tag.
 
 ```sh
-npm publish ./dist/npm/portloom-1.1.1.tgz --access public
+npm publish ./dist/npm/portloom-1.1.2.tgz --access public
 npm run release:status
 ```
 

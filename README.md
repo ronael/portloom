@@ -16,10 +16,10 @@ npm install --global portloom
 portloom
 ```
 
-The features below require **1.1.0 or later**; Pip's refreshed design requires **1.1.1**. Check `npm view portloom version`; if the registry has an older version, download `portloom-1.1.1.tgz` from [GitHub Releases](https://github.com/ronael/portloom/releases) and install it directly:
+The animated bat is included in **1.1.2 or later**. To update an existing npm installation, run `npm install --global portloom@latest`. Release archives are also available from [GitHub Releases](https://github.com/ronael/portloom/releases):
 
 ```sh
-npm install --global ./portloom-1.1.1.tgz
+npm install --global ./portloom-1.1.2.tgz
 ```
 
 Native `.tar.gz` downloads also work without npm: extract the archive for your platform and run `./portloom`. The npm launcher uses `exec`; no Node or Bun process stays in memory. There are no install scripts, extra downloads or compilation during installation.
@@ -45,11 +45,11 @@ Precedence: **`--lang` → `PORTLOOM_LANG` → saved preference → English**. P
 - Project groups keyed by their full directory, with the Git branch when available. Press `1` for projects or `g` to toggle grouping; Enter expands or collapses a group. Group headers never stop multiple processes.
 - An inspector with command, executable, directory, addresses, CPU, memory and every port owned by the process.
 - Search across ports, PIDs, commands, directories and project names. Keyboard and mouse support, scrollable details and JSON output.
-- Meet **Pip**, the filled pixel companion in the header: a rounded shell, expressive inset eyes and little contact-pin feet. A short wave ends with a wink; quiet blinks and glances bring it to life between scans. It reacts to scans and pauses while preserving the port table's height. Press `a` to pause its animations, or start with `--no-motion` / `PORTLOOM_NO_MOTION=1` for a still character.
+- Meet **Pip the bat**: a cyan pixel companion that flies in, blinks, beats its wings and listens for activity. Its original 59 frames cover arrival, rest, listening, alert and departure. Press `a` to pause its animations, or start with `--no-motion` / `PORTLOOM_NO_MOTION=1`. The full sprite appears in terminals with at least 24 rows; shorter windows prioritize the port table. Pressing `q` plays a brief departure, which any key can skip. Ctrl+C and OS signals exit immediately.
 
 ![Expandable project groups](docs/assets/projects.png)
 
-![Pip waves, blinks, scans and rests in the terminal header](docs/assets/pip.gif)
+![Pip the bat arrives, rests, listens, reacts and flies away](docs/assets/pip.gif)
 
 ## Direct commands
 

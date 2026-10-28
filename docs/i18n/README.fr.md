@@ -13,7 +13,7 @@ npm install --global portloom
 portloom
 ```
 
-Les fonctions ci-dessous nécessitent **1.1.0 ou plus récent** ; le nouveau dessin de Pip nécessite **1.1.1**. Vérifie `npm view portloom version` ; si le registre distribue une version plus ancienne, télécharge `portloom-1.1.1.tgz` dans les [releases GitHub](https://github.com/ronael/portloom/releases), puis installe-la avec `npm install --global ./portloom-1.1.1.tgz`.
+La chauve-souris animée est disponible à partir de la **1.1.2**. Pour mettre à jour une installation npm, lance `npm install --global portloom@latest`. L’archive `portloom-1.1.2.tgz` est aussi disponible dans les [releases GitHub](https://github.com/ronael/portloom/releases) et s’installe avec `npm install --global ./portloom-1.1.2.tgz`.
 
 Les archives natives `.tar.gz` permettent aussi de lancer `./portloom` sans npm. Aucun processus Node ou Bun ne reste en mémoire ; aucun script, téléchargement supplémentaire ou compilation n’est exécuté à l’installation.
 
@@ -34,11 +34,11 @@ Priorité : **`--lang` → `PORTLOOM_LANG` → préférence enregistrée → ang
 
 ## Projets, sites et commandes
 
-**Pip**, la mascotte en pixels pleins, accompagne l’en-tête : coque arrondie, yeux expressifs et petits pieds en forme de broches. Son salut se termine par un clin d’œil ; quelques clignements et regards animent les moments calmes. Elle réagit aux relevés et à la pause, sans réduire la hauteur du tableau. La touche `a` fige ou reprend les animations ; `--no-motion` ou `PORTLOOM_NO_MOTION=1` permet de démarrer avec un personnage immobile.
+**Pip la chauve-souris** accompagne l’en-tête en cyan : elle arrive en vol, cligne des yeux, bat des ailes et écoute l’activité. Ses 59 images d’origine couvrent l’arrivée, le repos, l’écoute, l’alerte et le départ. La touche `a` fige ou reprend les animations ; `--no-motion` ou `PORTLOOM_NO_MOTION=1` permet de démarrer avec un personnage immobile. Le dessin complet apparaît à partir de 24 lignes ; les fenêtres plus courtes donnent la priorité aux ports. La touche `q` joue un bref envol, que toute touche permet de passer. Ctrl+C et les signaux système quittent immédiatement.
 
 La touche `1` affiche les projets regroupés ; `g` active ou désactive le regroupement dans les autres vues. Entrée déplie ou replie un projet. Le regroupement utilise son dossier complet et affiche la branche Git lorsqu’elle est disponible. Une ligne de groupe ne déclenche jamais un arrêt collectif.
 
-![Pip : salut, clignement des yeux, scan et pause](../assets/pip.gif)
+![Pip la chauve-souris : arrivée, repos, écoute, alerte et départ](../assets/pip.gif)
 
 ```sh
 portloom list --projects

@@ -1,7 +1,7 @@
 use portloom::{
     domain::policy::Actor,
     presentation::{
-        animation::{AvatarFrame, Mood, Pose},
+        animation::{AvatarFrame, Mood, Sequence},
         state::{Overlay, State},
     },
 };
@@ -25,16 +25,46 @@ fn motion_has_still_intervals_and_reduced_motion_is_time_independent() {
         AvatarFrame::at(Mood::Idle, true, 1500),
         AvatarFrame::at(Mood::Idle, true, 3000)
     );
-    assert_eq!(AvatarFrame::at(Mood::Idle, true, 3250).pose, Pose::Blink);
-    assert_eq!(AvatarFrame::at(Mood::Idle, true, 900).pose, Pose::Wink);
     assert_ne!(
-        AvatarFrame::at(Mood::Working, true, 0),
-        AvatarFrame::at(Mood::Working, true, 180)
+        AvatarFrame::at(Mood::Working, true, 2000),
+        AvatarFrame::at(Mood::Working, true, 2200)
     );
     assert_eq!(
         AvatarFrame::at(Mood::Paused, true, 0),
         AvatarFrame::at(Mood::Paused, true, 9999)
     );
+}
+
+#[test]
+fn approved_sequences_keep_their_durations_and_one_shot_endings() {
+    for (sequence, count, duration) in [
+        (Sequence::Arrival, 15, 1280),
+        (Sequence::Rest, 10, 2000),
+        (Sequence::Listening, 9, 1500),
+        (Sequence::Alert, 10, 840),
+        (Sequence::Departure, 15, 1200),
+    ] {
+        assert_eq!(sequence.frames().len(), count);
+        assert_eq!(sequence.duration(), duration);
+        assert!(sequence.frames().iter().all(|frame| {
+            frame.duration > 0
+                && frame
+                    .pixels
+                    .iter()
+                    .flatten()
+                    .all(|pixel| b".PLSD".contains(pixel))
+        }));
+        assert_eq!(sequence.pixels(u64::MAX).len(), 16);
+    }
+    assert_eq!(Sequence::Arrival.pixels(u64::MAX), Sequence::Rest.pixels(0));
+    assert!(
+        Sequence::Departure
+            .pixels(u64::MAX)
+            .iter()
+            .flatten()
+            .all(|pixel| *pixel == b'.')
+    );
+    assert_eq!(Sequence::Rest.pixels(0), Sequence::Rest.pixels(2000));
 }
 
 #[test]

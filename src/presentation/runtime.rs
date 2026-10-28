@@ -1,4 +1,6 @@
 use super::{
+    animation::{AvatarFrame, Sequence},
+    components::mascot,
     i18n::{Locale, T},
     state::{Action, Overlay, State},
     tasks::{Job, Reply, Services, worker},
@@ -11,7 +13,7 @@ use crate::{
 use crossterm::{
     event::{
         self, DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture,
-        Event, KeyEventKind, MouseButton, MouseEventKind,
+        Event, KeyCode, KeyEventKind, KeyModifiers, MouseButton, MouseEventKind,
     },
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
@@ -164,6 +166,9 @@ fn event_loop(services: Services, options: Options, quit: Arc<AtomicBool>) -> io
         }
         let action = match event::read()? {
             Event::Key(key) if key.kind != KeyEventKind::Release => {
+                if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+                    break;
+                }
                 dirty = true;
                 state.key(key)
             }
@@ -243,7 +248,15 @@ fn event_loop(services: Services, options: Options, quit: Arc<AtomicBool>) -> io
             _ => Action::None,
         };
         match action {
-            Action::Quit => break,
+            Action::Quit => {
+                if state.motion_enabled
+                    && !state.too_small
+                    && terminal.size()?.height >= mascot::MIN_TERMINAL_HEIGHT
+                {
+                    farewell(&mut terminal, &mut state, &quit)?;
+                }
+                break;
+            }
             Action::Refresh => {
                 refresh = true;
                 state.message(state.locale.text(T::RefreshRequested), false);
@@ -280,6 +293,36 @@ fn event_loop(services: Services, options: Options, quit: Arc<AtomicBool>) -> io
                     .map_err(io::Error::other)?;
             }
             Action::None => {}
+        }
+    }
+    Ok(())
+}
+
+fn farewell(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    state: &mut State,
+    quit: &AtomicBool,
+) -> io::Result<()> {
+    let started = Instant::now();
+    while !quit.load(Ordering::Relaxed) {
+        let elapsed = started.elapsed().as_millis() as u64;
+        if elapsed >= Sequence::Departure.duration() {
+            break;
+        }
+        let next = AvatarFrame::departing(elapsed);
+        if next != state.avatar_frame {
+            state.avatar_frame = next;
+            terminal.draw(|frame| view::render(frame, state))?;
+        }
+        // Any key skips the farewell; OS signals also remain immediately actionable.
+        if event::poll(Duration::from_millis(25))? {
+            match event::read()? {
+                Event::Key(_) => break,
+                Event::Resize(_, _) => {
+                    terminal.draw(|frame| view::render(frame, state))?;
+                }
+                _ => {}
+            }
         }
     }
     Ok(())

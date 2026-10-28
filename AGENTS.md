@@ -9,6 +9,7 @@
 - Pas de sudo dans l’application, de signaux à un groupe, d’escalade automatique ou de télémétrie.
 - Les tests réels arrêtent uniquement leurs propres fixtures et les nettoient avec un garde RAII.
 - Tokens visuels dans `src/presentation/design.rs`. Référence et décisions dans `docs/design`.
+- Pour les futurs changements visuels, montrer un aperçu puis attendre la validation du propriétaire avant l’intégration. La chauve-souris et sa palette dans `docs/design/mascot.md` sont validées.
 - `npm run verify` contrôle architecture, formatage, Clippy, tests Rust et lanceur npm. `npm run preview` produit les rendus Ratatui.
 - `npm run build`, `npm run pack`, puis `node scripts/release/smoke.mjs` vérifient la livraison locale.
 - La racine npm est privée ; seule l’archive construite dans `dist/npm` est destinée à publication. Ne jamais publier implicitement.

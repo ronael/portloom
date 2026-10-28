@@ -3,6 +3,7 @@ use portloom::{
     domain::policy::Actor,
     infrastructure::{demo::DemoSystem, system::local::clock},
     presentation::{
+        animation::{AvatarFrame, Mood, Sequence},
         i18n::{Locale, T},
         state::{Overlay, State},
         view,
@@ -91,11 +92,28 @@ fn main() {
         true,
     );
     s.apply(demo.scan().unwrap());
-    for index in 0..80 {
-        s.busy = (40..55).contains(&index);
-        s.paused = (55..65).contains(&index);
-        s.animate(index * 100);
-        capture(&root, &format!("motion-{index:03}"), 80, 24, &mut s);
+    let mut index = 0;
+    for (sequence, mood) in [
+        (Sequence::Arrival, Mood::Idle),
+        (Sequence::Rest, Mood::Idle),
+        (Sequence::Listening, Mood::Working),
+        (Sequence::Alert, Mood::Warning),
+        (Sequence::Departure, Mood::Idle),
+    ] {
+        for sprite in sequence.frames() {
+            s.avatar_frame = AvatarFrame {
+                mood,
+                pixels: &sprite.pixels,
+            };
+            let name = format!("motion-{index:03}");
+            capture(&root, &name, 80, 24, &mut s);
+            fs::write(
+                format!("{root}/{name}/duration.json"),
+                sprite.duration.to_string(),
+            )
+            .unwrap();
+            index += 1;
+        }
     }
 }
 fn capture(root: &str, name: &str, w: u16, h: u16, s: &mut State) {

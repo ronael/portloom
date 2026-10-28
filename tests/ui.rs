@@ -48,7 +48,7 @@ fn confirm(s: &mut State, sensitive: bool) {
 }
 #[test]
 fn wide_and_compact_layouts_keep_categories_actions_and_shortcuts() {
-    for (w, h) in [(140, 40), (80, 24), (60, 20)] {
+    for (w, h) in [(140, 40), (80, 24), (60, 24), (60, 23), (60, 20)] {
         let mut s = state();
         let text = render(&mut s, w, h);
         assert!(text.contains("PORTLOOM"));

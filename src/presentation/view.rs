@@ -31,7 +31,11 @@ pub fn render(frame: &mut Frame, state: &mut State) {
     let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(4),
+            Constraint::Length(if area.height >= mascot::MIN_TERMINAL_HEIGHT {
+                8
+            } else {
+                3
+            }),
             Constraint::Length(2),
             Constraint::Min(8),
             Constraint::Length(1),
@@ -73,16 +77,20 @@ pub fn render(frame: &mut Frame, state: &mut State) {
     dialogs::render(frame, state);
 }
 fn header(frame: &mut Frame, state: &State, area: Rect) {
-    mascot::render(
-        frame,
-        state.avatar_frame,
-        Rect::new(area.x, area.y, mascot::WIDTH, mascot::HEIGHT),
-    );
+    let show_avatar = area.height >= mascot::HEIGHT;
+    if show_avatar {
+        mascot::render(
+            frame,
+            state.avatar_frame,
+            Rect::new(area.x, area.y, mascot::WIDTH, mascot::HEIGHT),
+        );
+    }
+    let inset = if show_avatar { mascot::WIDTH + 2 } else { 0 };
     let area = Rect::new(
-        area.x + 11,
-        area.y + 1,
-        area.width.saturating_sub(11),
-        area.height.saturating_sub(1),
+        area.x + inset,
+        area.y + u16::from(show_avatar) * 2,
+        area.width.saturating_sub(inset),
+        2,
     );
     let mode = if state.demo {
         state.locale.text(T::DemoMode)

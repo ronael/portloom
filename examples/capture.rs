@@ -30,6 +30,9 @@ fn main() {
         ("groups", 140, 40, 1, false),
         ("french", 140, 40, 1, false),
         ("language", 80, 24, 0, false),
+        ("paused", 80, 24, 0, false),
+        ("busy", 80, 24, 0, false),
+        ("error", 80, 24, 0, false),
     ] {
         let demo = Arc::new(DemoSystem::default());
         let actor = Actor {
@@ -42,6 +45,22 @@ fn main() {
             s.locale = Locale::FR;
         }
         s.notice = s.locale.text(T::SelectPort).into();
+        match name {
+            "paused" => {
+                s.demo = false;
+                s.paused = true;
+            }
+            "busy" => {
+                s.demo = false;
+                s.busy = true;
+            }
+            "error" => {
+                s.demo = false;
+                s.stale = true;
+                s.error = true;
+            }
+            _ => {}
+        }
         if view_index == 1 {
             s.grouped = true;
         }

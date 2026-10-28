@@ -45,6 +45,7 @@ Precedence: **`--lang` → `PORTLOOM_LANG` → saved preference → English**. P
 - Project groups keyed by their full directory, with the Git branch when available. Press `1` for projects or `g` to toggle grouping; Enter expands or collapses a group. Group headers never stop multiple processes.
 - An inspector with command, executable, directory, addresses, CPU, memory and every port owned by the process.
 - Search across ports, PIDs, commands, directories and project names. Keyboard and mouse support, scrollable details and JSON output.
+- Meet **Pip**, the small network-plug companion in the header. Its expression follows scanning, pause, search and confirmation states, within the existing three header rows.
 
 ![Expandable project groups](docs/assets/projects.png)
 

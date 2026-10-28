@@ -52,6 +52,8 @@ fn wide_and_compact_layouts_keep_categories_actions_and_shortcuts() {
         let mut s = state();
         let text = render(&mut s, w, h);
         assert!(text.contains("PORTLOOM"));
+        assert!(text.contains("11 ports"));
+        assert!(text.contains("9 processus"));
         assert!(text.contains("SITE/API"));
         assert!(text.contains("CONFIRMER"));
         assert!(text.contains("q quitter"));

@@ -1,5 +1,5 @@
 use super::{
-    components::{dialogs, inspector, ports},
+    components::{dialogs, inspector, mascot, ports},
     design::*,
     i18n::T,
     state::State,
@@ -73,6 +73,13 @@ pub fn render(frame: &mut Frame, state: &mut State) {
     dialogs::render(frame, state);
 }
 fn header(frame: &mut Frame, state: &State, area: Rect) {
+    mascot::render(frame, state, Rect::new(area.x, area.y, 7, 3));
+    let area = Rect::new(
+        area.x + 9,
+        area.y,
+        area.width.saturating_sub(9),
+        area.height,
+    );
     let mode = if state.demo {
         state.locale.text(T::DemoMode)
     } else if state.stale {

@@ -34,6 +34,8 @@ Priorité : **`--lang` → `PORTLOOM_LANG` → préférence enregistrée → ang
 
 ## Projets, sites et commandes
 
+**Pip**, la petite mascotte en forme de prise réseau, accompagne l’en-tête. Son expression suit les relevés, la pause, la recherche et les confirmations, dans les trois lignes déjà réservées à l’en-tête.
+
 La touche `1` affiche les projets regroupés ; `g` active ou désactive le regroupement dans les autres vues. Entrée déplie ou replie un projet. Le regroupement utilise son dossier complet et affiche la branche Git lorsqu’elle est disponible. Une ligne de groupe ne déclenche jamais un arrêt collectif.
 
 ```sh

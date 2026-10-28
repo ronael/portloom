@@ -51,6 +51,8 @@ portloom completions zsh
 
 The TUI groups projects by directory and displays their Git branch when available. `1` opens the project view; `g` toggles grouping; Enter expands a group. Group rows cannot stop processes collectively.
 
+**Pip**, a small network-plug character in the header, reflects scanning, pause, search and confirmation states using native terminal characters.
+
 `inspect`, `stop`, `probe` and `open` accept `--pid` and `--protocol tcp|udp`. Actions with multiple matching owners require a PID. Stopping requires interactive confirmation; piped input and JSON mode cannot authorize a stop.
 
 ## Keyboard

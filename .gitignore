@@ -1,0 +1,11 @@
+/.tooling/
+/target/
+/dist/
+/bin/
+/node_modules/
+/legacy/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store

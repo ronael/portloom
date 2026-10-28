@@ -1,0 +1,50 @@
+[workspace]
+resolver = "3"
+members = [".", "crates/domain", "crates/application"]
+default-members = [".", "crates/domain", "crates/application"]
+
+[workspace.package]
+version = "1.0.1"
+edition = "2024"
+rust-version = "1.90"
+license = "MIT"
+authors = ["ronaeld"]
+repository = "https://github.com/ronael/portloom"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[package]
+name = "portloom"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Un moniteur de ports natif, lisible et prudent"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+portloom-domain = { path = "crates/domain" }
+portloom-application = { path = "crates/application" }
+clap = { version = "4.5", features = ["derive"] }
+clap_complete = "4.5"
+crossterm = "0.29"
+ratatui = { version = "=0.30.2", default-features = false, features = ["crossterm", "layout-cache"] }
+regex = "1.12"
+serde_json = "1.0"
+signal-hook = "0.3"
+unicode-width = "0.2"
+unicode-segmentation = "1.12"
+
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.30", features = ["signal", "process", "user"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

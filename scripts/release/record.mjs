@@ -1,0 +1,11 @@
+import {readFileSync, writeFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {fileURLToPath} from 'node:url';
+import path from 'node:path';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
+const [platform,target]=process.argv.slice(2);
+if (!['darwin-arm64','darwin-x64','linux-arm64','linux-x64'].includes(platform)) throw new Error('Plateforme invalide');
+const version=/^version = "([^"]+)"/m.exec(readFileSync(path.join(root,'Cargo.toml'),'utf8'))[1];
+const data=readFileSync(path.join(root,'dist/native',platform,'portloom'));
+const notices=readFileSync(path.join(root,'dist/native',platform,'THIRD_PARTY_NOTICES.txt'));
+writeFileSync(path.join(root,'dist/native',platform,'build.json'),JSON.stringify({platform,target,version,noticesSha256:createHash('sha256').update(notices).digest('hex'),sha256:createHash('sha256').update(data).digest('hex')},null,2)+'\n');

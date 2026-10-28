@@ -1,0 +1,16 @@
+name: Proposition
+description: Proposer une amélioration
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Besoin concret
+      description: Décrire la situation et ce qui manque aujourd’hui.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Comportement souhaité
+    validations:
+      required: true

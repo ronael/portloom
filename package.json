@@ -1,0 +1,20 @@
+{
+  "name": "portloom-workspace",
+  "private": true,
+  "version": "1.0.1",
+  "scripts": {
+    "start": "./bin/portloom",
+    "demo": "./bin/portloom --demo",
+    "build": "sh scripts/dev/build.sh",
+    "verify": "sh scripts/dev/verify.sh",
+    "pack": "node scripts/release/pack.mjs",
+    "preview": "sh scripts/dev/rust.sh run --locked --example capture -- .tooling/previews",
+    "install:local": "sh scripts/dev/install.sh",
+    "release:status": "node scripts/release/status.mjs"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "ronaeld",
+    "url": "https://github.com/ronael"
+  }
+}

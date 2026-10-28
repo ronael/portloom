@@ -1,0 +1,31 @@
+{
+  "name": "portloom",
+  "description": "Native Rust terminal port monitor: identify projects, apps and system services, inspect TCP/UDP listeners, and stop processes with explicit confirmation.",
+  "license": "MIT",
+  "author": {
+    "name": "ronaeld",
+    "url": "https://github.com/ronael"
+  },
+  "homepage": "https://github.com/ronael/portloom#readme",
+  "bugs": {
+    "url": "https://github.com/ronael/portloom/issues"
+  },
+  "keywords": [
+    "cli",
+    "tui",
+    "terminal",
+    "ports",
+    "port-monitor",
+    "process-manager",
+    "tcp",
+    "udp",
+    "rust",
+    "ratatui",
+    "macos",
+    "developer-tools"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ronael/portloom.git"
+  }
+}

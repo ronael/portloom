@@ -1,0 +1,23 @@
+name: Bug
+description: Signaler un problème reproductible
+body:
+  - type: input
+    id: environment
+    attributes:
+      label: Version et environnement
+      description: Version de Portloom, système, architecture et terminal.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Étapes et résultat observé
+      description: Utiliser des processus de test ; retirer les informations privées des captures.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Résultat attendu
+    validations:
+      required: true

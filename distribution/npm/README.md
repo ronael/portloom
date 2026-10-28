@@ -51,7 +51,9 @@ portloom completions zsh
 
 The TUI groups projects by directory and displays their Git branch when available. `1` opens the project view; `g` toggles grouping; Enter expands a group. Group rows cannot stop processes collectively.
 
-**Pip**, a small network-plug character in the header, reflects scanning, pause, search and confirmation states using native terminal characters.
+**Pip**, a filled pixel character with a bevelled shell, antenna and contact-pin feet, waves, blinks and reacts to scans. Press `a` to pause its animations, or use `--no-motion` / `PORTLOOM_NO_MOTION=1` for a still character. It uses native terminal cells and keeps the table's height unchanged.
+
+![Pip in motion](https://raw.githubusercontent.com/ronael/portloom/main/docs/assets/pip.gif)
 
 `inspect`, `stop`, `probe` and `open` accept `--pid` and `--protocol tcp|udp`. Actions with multiple matching owners require a PID. Stopping requires interactive confirmation; piped input and JSON mode cannot authorize a stop.
 

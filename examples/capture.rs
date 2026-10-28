@@ -79,33 +79,52 @@ fn main() {
                 selected: portloom::application::preferences::Language::French,
             };
         }
-        let mut terminal = Terminal::new(TestBackend::new(w, h)).unwrap();
-        terminal.draw(|f| view::render(f, &mut s)).unwrap();
-        let b = terminal.backend().buffer();
-        let rows = (0..h)
-            .map(|y| {
-                (0..w)
-                    .map(|x| {
-                        let c = &b[(x, y)];
-                        serde_json::json!({"text":c.symbol(),"fg":color(c.fg),"bg":color(c.bg)})
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
-        let dir = format!("{root}/{name}");
-        fs::create_dir_all(&dir).unwrap();
-        fs::write(
-            format!("{dir}/frame.json"),
-            serde_json::to_vec(&rows).unwrap(),
-        )
-        .unwrap();
-        fs::write(
-            format!("{dir}/frame.txt"),
-            (0..h)
-                .map(|y| (0..w).map(|x| b[(x, y)].symbol()).collect::<String>())
-                .collect::<Vec<_>>()
-                .join("\n"),
-        )
-        .unwrap();
+        s.animate(1500);
+        capture(&root, name, w, h, &mut s);
     }
+    let demo = DemoSystem::default();
+    let mut s = State::new(
+        Actor {
+            uid: 501,
+            protected_pids: vec![],
+        },
+        true,
+    );
+    s.apply(demo.scan().unwrap());
+    for index in 0..80 {
+        s.busy = (40..55).contains(&index);
+        s.paused = (55..65).contains(&index);
+        s.animate(index * 100);
+        capture(&root, &format!("motion-{index:03}"), 80, 24, &mut s);
+    }
+}
+fn capture(root: &str, name: &str, w: u16, h: u16, s: &mut State) {
+    let mut terminal = Terminal::new(TestBackend::new(w, h)).unwrap();
+    terminal.draw(|f| view::render(f, s)).unwrap();
+    let b = terminal.backend().buffer();
+    let rows = (0..h)
+        .map(|y| {
+            (0..w)
+                .map(|x| {
+                    let c = &b[(x, y)];
+                    serde_json::json!({"text":c.symbol(),"fg":color(c.fg),"bg":color(c.bg)})
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    let dir = format!("{root}/{name}");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        format!("{dir}/frame.json"),
+        serde_json::to_vec(&rows).unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        format!("{dir}/frame.txt"),
+        (0..h)
+            .map(|y| (0..w).map(|x| b[(x, y)].symbol()).collect::<String>())
+            .collect::<Vec<_>>()
+            .join("\n"),
+    )
+    .unwrap();
 }

@@ -45,9 +45,11 @@ Precedence: **`--lang` → `PORTLOOM_LANG` → saved preference → English**. P
 - Project groups keyed by their full directory, with the Git branch when available. Press `1` for projects or `g` to toggle grouping; Enter expands or collapses a group. Group headers never stop multiple processes.
 - An inspector with command, executable, directory, addresses, CPU, memory and every port owned by the process.
 - Search across ports, PIDs, commands, directories and project names. Keyboard and mouse support, scrollable details and JSON output.
-- Meet **Pip**, the small network-plug companion in the header. Its expression follows scanning, pause, search and confirmation states, within the existing three header rows.
+- Meet **Pip**, the filled pixel companion in the header: a bevelled shell, antenna, waving arm, blinking eyes and little contact-pin feet. It reacts to scans and pauses while preserving the port table's height. Press `a` to pause its animations, or start with `--no-motion` / `PORTLOOM_NO_MOTION=1` for a still character.
 
 ![Expandable project groups](docs/assets/projects.png)
+
+![Pip waves, blinks, scans and rests in the terminal header](docs/assets/pip.gif)
 
 ## Direct commands
 
@@ -83,6 +85,7 @@ A valid HTTP response, including 4xx/5xx, confirms the protocol, not application
 | `g` | Toggle project grouping |
 | `w` / `o` | Verify HTTP / verify and open |
 | `k` / `K` | Prepare SIGTERM / SIGKILL |
+| `a` | Pause / resume Pip’s animations |
 | `L` | Change language |
 | `Esc` | Cancel or close |
 | `Space` / `r` | Pause / refresh |

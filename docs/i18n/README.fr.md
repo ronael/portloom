@@ -34,9 +34,11 @@ Priorité : **`--lang` → `PORTLOOM_LANG` → préférence enregistrée → ang
 
 ## Projets, sites et commandes
 
-**Pip**, la petite mascotte en forme de prise réseau, accompagne l’en-tête. Son expression suit les relevés, la pause, la recherche et les confirmations, dans les trois lignes déjà réservées à l’en-tête.
+**Pip**, la mascotte en pixels pleins, accompagne l’en-tête : coque en relief, antenne, petit signe de la main, yeux qui clignent et pieds en forme de broches. Elle réagit aux relevés et à la pause, sans réduire la hauteur du tableau. La touche `a` fige ou reprend les animations ; `--no-motion` ou `PORTLOOM_NO_MOTION=1` permet de démarrer avec un personnage immobile.
 
 La touche `1` affiche les projets regroupés ; `g` active ou désactive le regroupement dans les autres vues. Entrée déplie ou replie un projet. Le regroupement utilise son dossier complet et affiche la branche Git lorsqu’elle est disponible. Une ligne de groupe ne déclenche jamais un arrêt collectif.
+
+![Pip : salut, clignement des yeux, scan et pause](../assets/pip.gif)
 
 ```sh
 portloom list --projects
@@ -65,6 +67,7 @@ Une réponse HTTP valide, même 4xx/5xx, confirme le protocole, pas la santé de
 | `↑↓` / `Entrée` | Sélectionner / détail ou déplier un projet |
 | `g` / `w` / `o` | Grouper / vérifier HTTP / vérifier et ouvrir |
 | `k` / `K` | Préparer SIGTERM / SIGKILL |
+| `a` | Figer / reprendre les animations de Pip |
 | `L` | Choisir la langue |
 | `Échap` / `Espace` / `r` | Annuler / pause / actualiser |
 | `?` / `q` / `Ctrl+C` | Aide / quitter |

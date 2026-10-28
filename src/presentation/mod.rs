@@ -1,3 +1,4 @@
+pub mod animation;
 pub mod cli;
 pub mod components;
 pub mod console;

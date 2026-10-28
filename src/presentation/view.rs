@@ -31,8 +31,8 @@ pub fn render(frame: &mut Frame, state: &mut State) {
     let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),
-            Constraint::Length(3),
+            Constraint::Length(4),
+            Constraint::Length(2),
             Constraint::Min(8),
             Constraint::Length(1),
             Constraint::Length(1),
@@ -73,12 +73,16 @@ pub fn render(frame: &mut Frame, state: &mut State) {
     dialogs::render(frame, state);
 }
 fn header(frame: &mut Frame, state: &State, area: Rect) {
-    mascot::render(frame, state, Rect::new(area.x, area.y, 7, 3));
+    mascot::render(
+        frame,
+        state.avatar_frame,
+        Rect::new(area.x, area.y, mascot::WIDTH, mascot::HEIGHT),
+    );
     let area = Rect::new(
-        area.x + 9,
-        area.y,
-        area.width.saturating_sub(9),
-        area.height,
+        area.x + 11,
+        area.y + 1,
+        area.width.saturating_sub(11),
+        area.height.saturating_sub(1),
     );
     let mode = if state.demo {
         state.locale.text(T::DemoMode)

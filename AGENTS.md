@@ -13,3 +13,4 @@
 - `npm run build`, `npm run pack`, puis `node scripts/release/smoke.mjs` vérifient la livraison locale.
 - La racine npm est privée ; seule l’archive construite dans `dist/npm` est destinée à publication. Ne jamais publier implicitement.
 - Les archives locales éventuelles dans `.tooling/legacy-typescript` et les rapports dans `.tooling/verification-history` ne font pas partie du dépôt public. Ne pas les supprimer ni les publier.
+- Les contacts publics du mainteneur passent par les issues et le signalement privé GitHub ; ne pas ajouter d’adresse personnelle.

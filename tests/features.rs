@@ -1,3 +1,5 @@
+#[path = "features/animation.rs"]
+mod animation;
 #[path = "features/language.rs"]
 mod language;
 #[path = "features/projects.rs"]

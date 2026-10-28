@@ -1,4 +1,5 @@
 use super::{
+    animation::{AvatarFrame, Mood},
     grouping::{self, VisibleRow},
     i18n::{Locale, T},
 };
@@ -38,6 +39,8 @@ pub enum Action {
     Language(Language),
 }
 pub struct State {
+    pub motion_enabled: bool,
+    pub avatar_frame: AvatarFrame,
     pub snapshot: Snapshot,
     pub locale: Locale,
     pub grouped: bool,
@@ -72,6 +75,8 @@ pub struct State {
 impl State {
     pub fn new(actor: Actor, demo: bool) -> Self {
         Self {
+            motion_enabled: true,
+            avatar_frame: AvatarFrame::default(),
             snapshot: Snapshot::default(),
             locale: Locale::EN,
             grouped: false,
@@ -106,6 +111,30 @@ impl State {
     }
     pub fn selected_row(&self) -> Option<&VisibleRow> {
         self.table.selected().and_then(|i| self.rows.get(i))
+    }
+    pub fn animate(&mut self, elapsed_ms: u64) -> bool {
+        let mood = if let Overlay::Confirm { plan, .. } = &self.overlay {
+            if plan.force {
+                Mood::Danger
+            } else {
+                Mood::Warning
+            }
+        } else if self.stale || self.error {
+            Mood::Danger
+        } else if self.busy {
+            Mood::Working
+        } else if self.paused {
+            Mood::Paused
+        } else if self.searching {
+            Mood::Focused
+        } else {
+            Mood::Idle
+        };
+        let moving = self.motion_enabled && matches!(self.overlay, Overlay::None);
+        let next = AvatarFrame::at(mood, moving, elapsed_ms);
+        let changed = next != self.avatar_frame;
+        self.avatar_frame = next;
+        changed
     }
     pub fn selected(&self) -> Option<&Endpoint> {
         match self.selected_row()? {
@@ -431,6 +460,17 @@ impl State {
                 self.overlay = Overlay::Language {
                     selected: self.locale.0,
                 }
+            }
+            KeyCode::Char('a') => {
+                self.motion_enabled = !self.motion_enabled;
+                self.message(
+                    self.locale.text(if self.motion_enabled {
+                        T::MotionOn
+                    } else {
+                        T::MotionOff
+                    }),
+                    false,
+                );
             }
             KeyCode::Char('r') => return Action::Refresh,
             KeyCode::Char('k') => return self.prepare(false),

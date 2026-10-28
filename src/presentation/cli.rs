@@ -29,6 +29,12 @@ pub struct Cli {
         help = "JSON output without an interactive interface"
     )]
     pub json: bool,
+    #[arg(
+        long,
+        global = true,
+        help = "Keep the mascot still (also toggle with a in the interface)"
+    )]
+    pub no_motion: bool,
     #[arg(long, global = true, default_value_t = 2000, value_parser = clap::value_parser!(u64).range(500..=60000), help = "Scan interval in milliseconds")]
     pub interval: u64,
     #[arg(long, global = true, value_parser = language, value_name = "en|fr", help = "Use this language once, without changing the saved preference")]
@@ -110,6 +116,7 @@ pub fn command(locale: Locale) -> clap::Command {
         .after_help("Sans commande : interface interactive.\nTouches : g projets · w vérifier HTTP · o ouvrir · k arrêter · L langue · ? aide\nLangue : --lang > PORTLOOM_LANG > préférence enregistrée > anglais.\nUn choix de langue est proposé au premier lancement interactif.")
         .mut_arg("demo", |a| a.help("Simulation sans agir sur les processus réels ni ouvrir le navigateur"))
         .mut_arg("json", |a| a.help("Sortie JSON sans interface interactive"))
+        .mut_arg("no_motion", |a| a.help("Désactiver les animations de la mascotte (touche a dans l’interface)"))
         .mut_arg("interval", |a| a.help("Intervalle des relevés en millisecondes"))
         .mut_arg("lang", |a| a.help("Langue de ce lancement, sans modifier la préférence enregistrée"));
     for (name, about) in [

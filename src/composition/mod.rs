@@ -90,6 +90,7 @@ pub fn run() -> ExitCode {
         locale,
         first_language,
         port: None,
+        motion: !cli.no_motion && std::env::var_os("PORTLOOM_NO_MOTION").is_none(),
     };
     match console::execute(cli, services, options) {
         Ok(()) => ExitCode::SUCCESS,

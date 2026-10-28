@@ -45,6 +45,7 @@ pub struct Options {
     pub locale: Locale,
     pub first_language: Option<Language>,
     pub port: Option<u16>,
+    pub motion: bool,
 }
 pub fn run(services: Services, options: Options) -> AppResult<()> {
     if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
@@ -81,12 +82,14 @@ fn event_loop(services: Services, options: Options, quit: Arc<AtomicBool>) -> io
     state.locale = options.locale;
     state.notice = state.locale.text(T::Reading).into();
     state.fixed_port = options.port;
+    state.motion_enabled = options.motion;
     if let Some(selected) = options.first_language {
         state.overlay = Overlay::Language { selected };
     }
     let mut last_scan = Instant::now();
     let mut refresh = true;
     let mut dirty = true;
+    let animation_start = Instant::now();
     while !quit.load(Ordering::Relaxed) {
         while let Ok(reply) = replies.try_recv() {
             state.busy = false;
@@ -151,6 +154,7 @@ fn event_loop(services: Services, options: Options, quit: Arc<AtomicBool>) -> io
             refresh = false;
             dirty = true;
         }
+        dirty |= state.animate(animation_start.elapsed().as_millis() as u64);
         if dirty {
             terminal.draw(|frame| view::render(frame, &mut state))?;
             dirty = false;

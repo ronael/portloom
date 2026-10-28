@@ -2,6 +2,7 @@
 pub struct Project {
     pub name: String,
     pub root: String,
+    pub branch: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

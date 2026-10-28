@@ -119,7 +119,10 @@ fn new_ports_require_a_new_confirmation() {
     added.id = "TCP:8888:8421".into();
     added.port = 8888;
     fake.rows.lock().unwrap().push(added);
-    assert!(stop.execute(&plan, "").unwrap_err().contains("autre port"));
+    assert_eq!(
+        stop.execute(&plan, "").unwrap_err(),
+        portloom::domain::issue::Issue::NewPorts
+    );
     assert!(fake.signals.lock().unwrap().is_empty());
 }
 #[test]
@@ -127,7 +130,10 @@ fn classification_change_requires_new_confirmation() {
     let (fake, stop, e) = setup(false, false);
     let plan = stop.prepare(&e, false).unwrap();
     fake.rows.lock().unwrap()[0].process.command = "node worker.js".into();
-    assert!(stop.execute(&plan, "").unwrap_err().contains("usage"));
+    assert_eq!(
+        stop.execute(&plan, "").unwrap_err(),
+        portloom::domain::issue::Issue::UsageChanged
+    );
     assert!(fake.signals.lock().unwrap().is_empty());
 }
 #[test]

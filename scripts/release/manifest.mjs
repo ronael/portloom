@@ -1,8 +1,8 @@
 const platformsByName = {
   'darwin-arm64': 'macOS · Apple Silicon (ARM64)',
   'darwin-x64': 'macOS · Intel (x64)',
-  'linux-arm64': 'Linux · ARM64 · glibc (Ubuntu 22.04 ou plus récent)',
-  'linux-x64': 'Linux · x64 · glibc (Ubuntu 22.04 ou plus récent)',
+  'linux-arm64': 'Linux · ARM64 · glibc (Ubuntu 22.04 or newer)',
+  'linux-x64': 'Linux · x64 · glibc (Ubuntu 22.04 or newer)',
 };
 export function createManifest(metadata, version, platforms) {
   for (const field of ['name', 'description', 'license', 'homepage']) {
@@ -34,6 +34,6 @@ export function createManifest(metadata, version, platforms) {
 export function renderReadme(template, platforms) {
   const marker = '<!-- SUPPORTED_PLATFORMS -->';
   if (!template.includes(marker)) throw new Error('Bloc des plateformes manquant dans le README npm.');
-  const table = ['| Plateforme incluse dans cette version |', '| --- |', ...platforms.map(p => `| ${platformsByName[p]} |`)];
+  const table = ['| Platform included in this release |', '| --- |', ...platforms.map(p => `| ${platformsByName[p]} |`)];
   return template.replace(marker, table.join('\n'));
 }

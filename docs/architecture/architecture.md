@@ -1,50 +1,69 @@
 # Architecture
 
-Le projet est un workspace de trois crates. `portloom-domain` contient les modèles, la classification et la politique d’arrêt. `portloom-application` définit les ports et le cas d’usage `StopProcess`. La crate racine `portloom` contient les adaptateurs, les présentations et la composition.
+Portloom is a three-crate workspace. `portloom-domain` owns models, classification, typed reasons and stop policy. `portloom-application` defines use cases and their ports. The root crate contains infrastructure, presentation and the composition root.
 
 ```mermaid
 flowchart BT
-    Application[portloom-application : cas d’usage et ports] --> Domaine[portloom-domain : règles pures]
-    Infrastructure[Adaptateurs système et démo] --> Application
-    Presentation[CLI et TUI Ratatui] --> Application
-    Infrastructure --> Domaine
-    Presentation --> Domaine
-    Composition[Composition] --> Infrastructure
+    Application[Application: use cases and ports] --> Domain[Domain: pure rules]
+    Infrastructure[System and demo adapters] --> Application
+    Presentation[CLI and Ratatui TUI] --> Application
+    Infrastructure --> Domain
+    Presentation --> Domain
+    Composition[Composition root] --> Infrastructure
     Composition --> Presentation
 ```
 
-Les flèches indiquent les dépendances de code. Cargo empêche le cœur de dépendre de la crate exécutable ou d’un framework absent de son manifeste. Le domaine dépend seulement de `regex`, une bibliothèque de calcul sans accès système dans son usage ici. L’application dépend seulement du domaine. Les modules de présentation et d’infrastructure restent dans la crate exécutable ; une règle CI interdit leur dépendance mutuelle. Les isoler davantage n’apporterait pas de frontière métier supplémentaire à ce stade.
+Arrows show code dependencies. Cargo prevents the core from depending on the executable crate or UI frameworks. The domain only depends on `regex`, used for pure classification; application only depends on domain. CI forbids dependencies between presentation and infrastructure, and direct system access in the core.
 
-## Responsabilités et injection
+## Ports and responsibilities
 
-| Contrat | Responsabilité | Implémentations |
+| Contract | Responsibility | Implementations |
 | --- | --- | --- |
-| `PortScanner` | Lire un relevé de ports | `LocalScanner`, `DemoSystem`, doubles de test |
-| `ProcessControl` | Inspecter un processus et envoyer un signal individuel | `LocalControl`, `DemoSystem`, doubles de test |
-| `Clock` | Mesurer le temps et espacer les vérifications | Horloge monotone locale, horloge de test |
+| `PortScanner` | Read a port snapshot | Local scanner, demo, test doubles |
+| `ProcessControl` | Inspect identity and signal one process | Local control, demo, test doubles |
+| `Clock` | Monotonic stop deadlines and polling | System clock, deterministic test clock |
+| `HttpProbe` | Verify a constrained local HTTP target | Bounded TCP adapter, demo, test doubles |
+| `BrowserOpener` | Open a verified local URL | Platform command adapter, demo, test doubles |
+| `PreferencesStore` | Load/save language preferences | Atomic JSON file adapter, test doubles |
 
-`StopProcess` reçoit ces contrats et l’identité de l’acteur par son constructeur. La composition choisit les implémentations. Les adaptateurs ne choisissent pas les règles métier ; les widgets ne lancent pas de commandes système. Le JSON est un format de présentation, séparé des modèles métier.
+Constructors receive these contracts; composition chooses implementations. Widgets never execute system commands. JSON is a presentation format, separate from domain models. SOLID is applied at these behavioral boundaries without an injection container or an interface for every structure.
 
-Ce découpage applique SOLID à des frontières concrètes : responsabilité limitée par module, ajout d’adaptateurs via des traits, mêmes contrats pour les implémentations réelles et simulées, interfaces séparées pour lecture/commande/temps, dépendances dirigées vers les ports. Il n’ajoute ni conteneur d’injection, ni interface par structure, ni couche sans comportement.
+## Process stops
 
-## Arrêt d’un processus
+`StopProcess.prepare` refreshes identity and includes every port owned by the process. `execute` rechecks ownership, classification, PID confirmation and new ports, then inspects identity immediately before signalling. Polling returns stopped, gone or still running after 1.5 seconds, without escalation. System processes, other users, Portloom and its parent are protected.
 
-`prepare` relit l’identité et regroupe tous les ports du propriétaire. `execute` vérifie la propriété, la classification, la confirmation et les nouveaux ports, puis relit le processus avant un signal individuel. Le polling retourne arrêté, disparu ou encore présent après 1,5 s, sans escalade. L’horloge monotone évite les effets d’un changement d’heure système ; son remplacement en test évite les attentes réelles. Les zombies sont omis par le parseur `ps`.
+Presentation obtains explicit confirmation: `Y` in English, `O` in French, or the exact PID for sensitive categories. Direct `stop` rejects piped input, redirected output and JSON before scanning. Project headers cannot initiate collective stops. Identity checks and signalling remain separate OS operations, with a residual race; macOS start times have one-second precision.
 
-## Lecture du système
+## Queries and project groups
 
-Le scanner utilise `lsof` pour TCP/UDP et les dossiers courants, puis `ps` pour les identités et exécutables. Aucun shell : les arguments sont transmis séparément. Les sorties sont limitées à 8 Mio par flux et les commandes à 4 s. IPv4/IPv6 sont regroupés par protocole/port/PID ; le côté local des sockets UDP connectés est conservé. L’UID est recoupé entre les outils. Linux complète le chemin exécutable via `/proc/PID/exe`.
+`PortQuery` filters ports, protocols, owners and project workloads. Mutating or HTTP actions reject ambiguous owners unless a PID selects one. `ProjectGroup` keys by the full directory; identical project names in different directories remain separate. Shared services are not absorbed into project groups.
 
-La recherche de projet s’arrête après cinq ancêtres, exclut le dossier personnel, les dépendances et les dossiers de support applicatif, et lit au plus 128 Kio de `package.json`. Le cache est limité à 256 entrées et 30 s. Un dossier inaccessible réduit les indices disponibles.
+Presentation owns collapsed state and stable selection keys. Search temporarily reveals matching children. A refresh reconciles selection by identity rather than using a potentially stale row index. Git branch discovery reads bounded HEAD files, including worktree pointers, without spawning Git.
 
-## Interface et cycle de vie
+## HTTP verification
 
-Un worker traite les scans et les arrêts sur un canal. Une seule opération système est active ; les entrées clavier restent disponibles. Aucun nouveau scan pendant une confirmation. Ratatui dessine après un changement ; la boucle attend les événements. Les dernières données restent visibles avec leur état d’erreur si un relevé échoue.
+`HttpTarget` can only be constructed from TCP endpoints with numeric loopback addresses or wildcard bindings mapped to loopback. `WebService` refreshes the owner, excludes targets with competing owners, and invokes the HTTP port. Before opening the browser, it refreshes identity and target availability again.
 
-Un garde RAII restaure le terminal après une sortie, une erreur ou une panique déroulée. SIGINT, SIGTERM et SIGHUP déclenchent la sortie de boucle. SIGKILL ne peut pas être intercepté. Les règles de rendu, couleurs sémantiques et traitement Unicode sont centralisés dans `src/presentation/design.rs`.
+The adapter sends HEAD /, with a total two-second network deadline and an 8 KiB header bound. It does not resolve DNS, follow redirects, send credentials or negotiate TLS. A valid HTTP/1.x status from 200 to 599 confirms the protocol, not application health. Browser opening uses a separately bounded `open`/`xdg-open` command with an argument vector, never a shell. Demo adapters perform no network or browser actions. No background HTTP probing occurs.
 
-## Vérification et limites
+## Language and preferences
 
-`npm run verify` contrôle le graphe Cargo, les frontières source, dix fichiers maximum par dossier, rustfmt, Clippy et tous les tests Rust/Node. La vérification des imports est volontairement conservatrice ; elle ne remplace pas le compilateur. La CI ajoute la restauration réelle d’un pseudo-terminal et l’installation de l’archive npm sur chaque cible native. Les fixtures réseau sont créées et nettoyées par les tests ; aucun service de l’utilisateur n’est arrêté.
+The domain emits typed `Issue` and `Evidence` values. Presentation translates them through an exhaustive English/French catalog. Tests compare interpolation fields across translations. JSON identifiers remain stable, while display labels follow the selected language; raw OS diagnostics keep their original wording.
 
-`lsof` et `ps` représentent une part du coût d’un relevé. Aucun gain chiffré de performance n’est revendiqué sans mesure. Le contrôle d’identité puis le signal ne sont pas atomiques ; les superviseurs peuvent relancer un processus. La classification d’un site reste indicative. Windows et musl ne sont pas pris en charge.
+Resolution is explicit flag, environment override, saved preference, then English. Terminal locale only suggests the first interactive picker selection. Installation, scripts, help, demo and CI never prompt. Only an explicit language command or picker validation writes preferences. File writes preserve unrelated settings, use a private temporary file and replace the destination atomically.
+
+## System scanning and lifecycle
+
+The scanner uses `lsof` for TCP/UDP and directories, then `ps` for identity and executable data. Arguments are passed directly, without a shell. Output is bounded to 8 MiB per stream and commands to four seconds. IPv4/IPv6 records are grouped by protocol/port/PID; connected UDP keeps the local endpoint. UID values are cross-checked. Linux supplements executable paths through `/proc/PID/exe`.
+
+Project discovery visits at most five ancestors, excludes home and dependency/support directories, and reads at most 128 KiB from a package manifest. Git metadata reads are limited to 4 KiB. The cache holds at most 256 entries for 30 seconds. Missing permissions reduce available context.
+
+A worker serializes scans, stops, HTTP and preference writes while keyboard handling remains available. Confirmations suspend scanning. Ratatui redraws after changes; the event loop otherwise waits. A failed refresh leaves the last snapshot visible with a stale-data warning. HTTP results are labeled as the last check and discarded when their endpoint identity or addresses change.
+
+A RAII guard restores the terminal on exit, errors and unwinding panics. SIGINT, SIGTERM and SIGHUP exit the loop; SIGKILL cannot be caught. Visual tokens and Unicode handling live in `presentation/design.rs`.
+
+## Validation and limits
+
+`npm run verify` checks Cargo dependencies, source boundaries, the ten-files-per-directory rule, formatting, Clippy and Rust/Node tests. CI adds real PTY restoration, language onboarding, simulated stop confirmations and archive installation on all four native platforms. Network fixtures are owned and cleaned up by tests; user services are never stopped.
+
+The scanner's external commands contribute to refresh cost. No performance improvement is claimed without measurement. Supervisors may restart stopped processes. Classification is heuristic. Windows, musl and HTTPS probing are not supported.

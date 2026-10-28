@@ -1,9 +1,9 @@
-# Sécurité
+# Security
 
-Les correctifs de sécurité visent la dernière version publiée. Portloom peut envoyer des signaux à des processus locaux ; les protections et confirmations font partie de son contrat.
+Security fixes target the latest release. Portloom can signal local processes; identity checks, system protections and explicit confirmation are part of its contract.
 
-Pour signaler une vulnérabilité, utiliser [le signalement privé GitHub](https://github.com/ronael/portloom/security/advisories/new). Pour un bug sans enjeu de sécurité ou une question, ouvrir une [issue](https://github.com/ronael/portloom/issues). Ne pas publier de preuve sensible dans une issue publique.
+Report vulnerabilities through [GitHub private vulnerability reporting](https://github.com/ronael/portloom/security/advisories/new). Use [issues](https://github.com/ronael/portloom/issues) for ordinary bugs or questions. Do not put sensitive evidence in a public issue.
 
-Indiquer la version, le système, le comportement observé et un scénario reproductible avec des processus de test. Retirer les arguments privés, jetons et chemins sensibles des captures ou exports. Aucun délai de réponse garanti n’est annoncé.
+Include the version, operating system, observed behavior and a reproduction using disposable test processes. Remove private arguments, tokens and sensitive paths from screenshots and exports. No response-time guarantee is offered.
 
-Les limitations connues de classification et de vérification d’identité sont décrites dans le README et la documentation d’architecture.
+Known classification, HTTP verification and process-identity limitations are documented in the README and architecture guide.

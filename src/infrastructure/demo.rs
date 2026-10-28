@@ -152,10 +152,32 @@ pub fn fixtures() -> Vec<Endpoint> {
         ),
     ];
     rows.into_iter().map(|(port, name, pid, protocol, address, command, cpu, memory_kb)| {
-        let project = match pid { 8421 | 8532 => Some("atelier-web"), 8530 => Some("portfolio"), _ => None }.map(|name| Project { name: name.into(), root: format!("/workspace/{name}") });
+        let project = match pid { 8421 | 8532 => Some("atelier-web"), 8530 => Some("portfolio"), _ => None }.map(|name| Project { name: name.into(), root: format!("/workspace/{name}"), branch: Some("main".into()) });
         Endpoint { id: format!("{}:{port}:{pid}", protocol.label()), port, protocol, addresses: vec![address.into()], process: ProcessInfo {
             pid, uid: 501, name: name.into(), command: command.into(), cpu, memory_kb, started_at: "Mon Oct 26 09:00:00 2026".into(),
             executable: Some(match pid { 700 => "/System/Library/CoreServices/ControlCenter.app/Contents/MacOS/ControlCenter", 3240 => "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", _ => name }.into()), cwd: project.as_ref().map(|p| p.root.clone()), project,
         }}
     }).collect()
+}
+
+impl crate::application::web::HttpProbe for DemoSystem {
+    fn probe(
+        &self,
+        targets: &[crate::domain::web::HttpTarget],
+    ) -> AppResult<crate::domain::web::HttpResponse> {
+        Ok(crate::domain::web::HttpResponse {
+            target: targets
+                .first()
+                .ok_or(crate::domain::issue::Issue::LoopbackRequired)?
+                .clone(),
+            status: 200,
+            elapsed_ms: 0,
+            simulated: true,
+        })
+    }
+}
+impl crate::application::web::BrowserOpener for DemoSystem {
+    fn open(&self, _: &crate::domain::web::HttpTarget) -> AppResult<()> {
+        Ok(())
+    }
 }

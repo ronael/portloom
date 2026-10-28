@@ -1,6 +1,7 @@
 use super::ports::{AppResult, Clock, PortScanner, ProcessControl, Signal};
 use crate::domain::{
     assessment::{Assessment, assess},
+    issue::Issue,
     model::{Endpoint, ProcessInfo, same_process},
     policy::{Actor, blocked},
 };
@@ -40,7 +41,7 @@ impl StopProcess {
         }
     }
     fn check(&self, target: &ProcessInfo) -> AppResult<()> {
-        blocked(target, &self.actor).map_or(Ok(()), |e| Err(e.into()))
+        blocked(target, &self.actor).map_or(Ok(()), Err)
     }
     pub fn prepare(&self, endpoint: &Endpoint, force: bool) -> AppResult<StopPlan> {
         self.check(&endpoint.process)?;
@@ -49,7 +50,7 @@ impl StopProcess {
             .endpoints
             .iter()
             .find(|e| e.id == endpoint.id && same_process(&e.process, &endpoint.process))
-            .ok_or("Ce port a changé de propriétaire. Actualise la sélection.")?;
+            .ok_or(Issue::OwnerChanged)?;
         self.check(&current.process)?;
         Ok(StopPlan {
             target: current.process.clone(),
@@ -71,15 +72,15 @@ impl StopProcess {
             return Ok(StopResult::Gone);
         };
         if !same_process(&current.process, &plan.target) {
-            return Err("Le processus a changé. Aucun signal envoyé.".into());
+            return Err(Issue::ProcessChanged);
         }
         self.check(&current.process)?;
         let assessment = assess(&current.process);
         if assessment.kind != plan.assessment.kind {
-            return Err("L’usage du processus a changé. Confirme à nouveau.".into());
+            return Err(Issue::UsageChanged);
         }
         if assessment.needs_pid && acknowledgement != current.process.pid.to_string() {
-            return Err("Saisis le PID exact pour confirmer cet arrêt sensible.".into());
+            return Err(Issue::ExactPidRequired);
         }
         if snapshot
             .endpoints
@@ -87,16 +88,13 @@ impl StopProcess {
             .filter(|e| same_process(&e.process, &plan.target))
             .any(|e| !plan.endpoints.iter().any(|old| old.id == e.id))
         {
-            return Err(
-                "Ce processus a ouvert un autre port. Confirme à nouveau pour voir tous les ports."
-                    .into(),
-            );
+            return Err(Issue::NewPorts);
         }
         let Some(live) = self.control.inspect(plan.target.pid)? else {
             return Ok(StopResult::Gone);
         };
         if !same_process(&live, &plan.target) {
-            return Err("Le PID a été réutilisé. Aucun signal envoyé.".into());
+            return Err(Issue::PidReused);
         }
         self.check(&live)?;
         self.control.signal(

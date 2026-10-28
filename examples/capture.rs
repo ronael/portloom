@@ -3,6 +3,7 @@ use portloom::{
     domain::policy::Actor,
     infrastructure::{demo::DemoSystem, system::local::clock},
     presentation::{
+        i18n::{Locale, T},
         state::{Overlay, State},
         view,
     },
@@ -26,6 +27,9 @@ fn main() {
         ("minimum", 60, 20, 0, false),
         ("system", 140, 40, 4, false),
         ("confirmation", 80, 24, 2, true),
+        ("groups", 140, 40, 1, false),
+        ("french", 140, 40, 1, false),
+        ("language", 80, 24, 0, false),
     ] {
         let demo = Arc::new(DemoSystem::default());
         let actor = Actor {
@@ -34,7 +38,13 @@ fn main() {
         };
         let mut s = State::new(actor.clone(), true);
         s.apply(demo.scan().unwrap());
-        s.notice = "Sélectionne un port pour comprendre son usage.".into();
+        if name == "french" {
+            s.locale = Locale::FR;
+        }
+        s.notice = s.locale.text(T::SelectPort).into();
+        if view_index == 1 {
+            s.grouped = true;
+        }
         s.view = view_index;
         s.rebuild();
         if dialog {
@@ -43,6 +53,11 @@ fn main() {
                 plan: Box::new(stop.prepare(s.selected().unwrap(), false).unwrap()),
                 input: String::new(),
                 scroll: 0,
+            };
+        }
+        if name == "language" {
+            s.overlay = Overlay::Language {
+                selected: portloom::application::preferences::Language::French,
             };
         }
         let mut terminal = Terminal::new(TestBackend::new(w, h)).unwrap();

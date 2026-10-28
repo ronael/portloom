@@ -19,6 +19,7 @@ fn state() -> State {
         },
         true,
     );
+    s.locale = portloom::presentation::i18n::Locale::FR;
     s.apply(DemoSystem::default().scan().unwrap());
     s
 }
@@ -65,12 +66,19 @@ fn compact_inspector_remains_scrollable_and_action_visible() {
     key(&mut s, KeyCode::Enter);
     let text = render(&mut s, 60, 20);
     assert!(text.contains("k Arrêter"));
-    for _ in 0..40 {
+    let mut saw_addresses = false;
+    let mut saw_http = false;
+    for _ in 0..50 {
         key(&mut s, KeyCode::Down);
+        let text = render(&mut s, 60, 20);
+        saw_addresses |= text.contains("ADRESSES");
+        saw_http |= text.contains("HTTP non vérifié");
+        assert!(text.contains("k Arrêter"));
     }
-    let text = render(&mut s, 60, 20);
-    assert!(text.contains("ADRESSES"));
-    assert!(text.contains("k Arrêter"));
+    assert!(
+        saw_addresses && saw_http,
+        "Every detail must be reachable while the stop action remains visible"
+    );
 }
 #[test]
 fn filter_search_focus_does_not_trigger_destructive_shortcuts() {

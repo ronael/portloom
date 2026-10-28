@@ -18,7 +18,10 @@ try {
   const metadata=JSON.parse(readFileSync(path.join(root,'distribution/npm/metadata.json'),'utf8'));
   for(const field of ['description','license','author','homepage','bugs','keywords','repository']) assert.deepEqual(pkg[field],metadata[field],`Métadonnée manquante dans l’archive : ${field}`);
   const license=readFileSync(path.join(installed,'LICENSE'),'utf8');assert.match(license,/MIT License/);assert.match(license,/Copyright \(c\) 2026 ronaeld/);
-  const readme=readFileSync(path.join(installed,'README.md'),'utf8');assert.ok(readme.includes('npm install --global portloom'));assert.ok(!readme.includes('<!-- SUPPORTED_PLATFORMS -->'));assert.ok(readme.includes('licence MIT'));
+  const readme=readFileSync(path.join(installed,'README.md'),'utf8');assert.ok(readme.includes('npm install --global portloom'));assert.ok(!readme.includes('<!-- SUPPORTED_PLATFORMS -->'));assert.ok(readme.includes('MIT license'));
+  assert.match(run(cli,['--lang','en','--help']),/Your ports, under control/);
+  assert.match(run(cli,['--lang','fr','--help']),/Tes ports, sous contrôle/);
+  assert.equal(JSON.parse(run(cli,['--demo','--lang','en','probe','3000','--json'])).simulated,true);
   assert.match(readFileSync(path.join(installed,'source/Cargo.toml'),'utf8'),new RegExp(`version = \"${version.replaceAll('.', '\\.')}\"`));
   assert.ok(readFileSync(path.join(installed,'source/src/main.rs'),'utf8').includes('composition::run'));
   assert.ok(readFileSync(path.join(installed,'source/crates/domain/src/lib.rs'),'utf8').includes('pub mod model'));

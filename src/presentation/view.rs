@@ -1,6 +1,7 @@
 use super::{
     components::{dialogs, inspector, ports},
     design::*,
+    i18n::T,
     state::State,
 };
 use ratatui::{
@@ -21,10 +22,7 @@ pub fn render(frame: &mut Frame, state: &mut State) {
     state.too_small = area.width < 60 || area.height < 20;
     if state.too_small {
         frame.render_widget(
-            Paragraph::new(
-                "PORTLOOM\n\nAgrandis le terminal : 60 × 20 minimum.\nq / Ctrl+C pour quitter.",
-            )
-            .style(style(ACCENT)),
+            Paragraph::new(state.locale.text(T::TooSmall)).style(style(ACCENT)),
             area,
         );
         return;
@@ -64,9 +62,9 @@ pub fn render(frame: &mut Frame, state: &mut State) {
         layout[3],
     );
     let footer = if area.width >= 100 {
-        "↑↓ choisir   / rechercher   Entrée détail   k arrêter   K forcer   espace pause   ? aide   q quitter"
+        state.locale.text(T::Footer)
     } else {
-        "↑↓ choix  / chercher  ↵ détail  k arrêt  ? aide  q quitter"
+        state.locale.text(T::FooterCompact)
     };
     frame.render_widget(
         Paragraph::new(fit(footer, layout[4].width as usize)).style(style(SUBTLE)),
@@ -76,15 +74,15 @@ pub fn render(frame: &mut Frame, state: &mut State) {
 }
 fn header(frame: &mut Frame, state: &State, area: Rect) {
     let mode = if state.demo {
-        "DÉMO · aucun effet système"
+        state.locale.text(T::DemoMode)
     } else if state.stale {
-        "ERREUR · données anciennes"
+        state.locale.text(T::StaleMode)
     } else if state.paused {
-        "PAUSE"
+        state.locale.text(T::PausedMode)
     } else if state.busy {
-        "LECTURE…"
+        state.locale.text(T::ReadingMode)
     } else {
-        "LOCAL · EN DIRECT"
+        state.locale.text(T::LiveMode)
     };
     frame.render_widget(
         Paragraph::new(Line::from(vec![
@@ -104,10 +102,14 @@ fn header(frame: &mut Frame, state: &State, area: Rect) {
         .map(|e| e.process.pid)
         .collect::<BTreeSet<_>>()
         .len();
-    let counts = format!(
-        "{} ports   {tcp} TCP   {} UDP   {count} processus",
-        endpoints.len(),
-        endpoints.len() - tcp
+    let counts = state.locale.format(
+        T::Counts,
+        &[
+            ("ports", &endpoints.len().to_string()),
+            ("tcp", &tcp.to_string()),
+            ("udp", &(endpoints.len() - tcp).to_string()),
+            ("processes", &count.to_string()),
+        ],
     );
     frame.render_widget(
         Paragraph::new(counts).style(style(TEXT)),
@@ -123,18 +125,7 @@ fn header(frame: &mut Frame, state: &State, area: Rect) {
     }
 }
 fn toolbar(frame: &mut Frame, state: &State, area: Rect) {
-    let labels = if area.width >= 90 {
-        [
-            "0 Tous",
-            "1 Projets",
-            "2 Services",
-            "3 Apps",
-            "4 Système",
-            "5 Inconnus",
-        ]
-    } else {
-        ["0 Tout", "1 Proj", "2 Serv", "3 Apps", "4 Syst", "5 Inco"]
-    };
+    let labels = state.locale.views(area.width < 90);
     let spans = labels
         .into_iter()
         .enumerate()
@@ -160,13 +151,19 @@ fn toolbar(frame: &mut Frame, state: &State, area: Rect) {
     let query = if state.searching {
         format!("/ {}▏", safe(&state.query))
     } else if state.query.is_empty() {
-        "/ rechercher un port, projet, PID…".into()
+        state.locale.text(T::Search).into()
     } else {
         format!("/ {}", safe(&state.query))
     };
     frame.render_widget(
         Paragraph::new(Line::from(vec![
-            Span::styled(format!("Tab {protocol}  ·  "), style(SUBTLE)),
+            Span::styled(
+                format!(
+                    "Tab {protocol}  ·  g {}  ·  ",
+                    if state.grouped { "▾" } else { "≡" }
+                ),
+                style(SUBTLE),
+            ),
             Span::styled(query, style(if state.searching { ACCENT } else { MUTED })),
         ])),
         Rect::new(area.x, area.y + 1, area.width, 1),

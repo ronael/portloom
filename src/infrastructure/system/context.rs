@@ -54,6 +54,7 @@ pub fn discover(cwd: &str, home: Option<&str>) -> Option<Project> {
         let project = |name| Project {
             name,
             root: dir.to_string_lossy().into_owned(),
+            branch: branch(dir),
         };
         if let Ok(file) = fs::File::open(dir.join("package.json")) {
             let mut data = String::new();
@@ -76,6 +77,39 @@ pub fn discover(cwd: &str, home: Option<&str>) -> Option<Project> {
         {
             return Some(project(name));
         }
+    }
+    None
+}
+
+fn small_file(path: &Path) -> Option<String> {
+    let mut text = String::new();
+    fs::File::open(path)
+        .ok()?
+        .take(4097)
+        .read_to_string(&mut text)
+        .ok()?;
+    (text.len() <= 4096).then_some(text)
+}
+fn branch(root: &Path) -> Option<String> {
+    for dir in root.ancestors().take(5) {
+        let marker = dir.join(".git");
+        let git = if marker.is_dir() {
+            marker
+        } else if marker.is_file() {
+            let target = small_file(&marker)?;
+            dir.join(target.trim().strip_prefix("gitdir: ")?)
+        } else {
+            continue;
+        };
+        let head = small_file(&git.join("HEAD"))?;
+        let value = head.trim();
+        if let Some(name) = value.strip_prefix("ref: refs/heads/") {
+            return Some(name.into());
+        }
+        if value.len() >= 7 && value.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return Some(format!("detached:{}", &value[..7]));
+        }
+        return None;
     }
     None
 }

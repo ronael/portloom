@@ -1,6 +1,7 @@
 use std::process::Command;
 fn cli(args: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_portloom"))
+        .env("PORTLOOM_LANG", "en")
         .args(args)
         .output()
         .unwrap()

@@ -31,6 +31,39 @@ fn project_discovery_is_bounded_and_skips_dependency_directories() {
     assert!(discover(dir.join("node_modules/lib").to_str().unwrap(), None).is_none());
     assert!(discover(dir.to_str().unwrap(), dir.to_str()).is_none());
     assert!(discover("relative", None).is_none());
+    fs::create_dir(dir.join(".git")).unwrap();
+    fs::write(dir.join(".git/HEAD"), "ref: refs/heads/feature/ports\n").unwrap();
+    assert_eq!(
+        discover(dir.to_str().unwrap(), None)
+            .unwrap()
+            .branch
+            .as_deref(),
+        Some("feature/ports")
+    );
+    fs::rename(dir.join(".git"), dir.join("git-metadata")).unwrap();
+    fs::write(dir.join(".git"), "gitdir: git-metadata\n").unwrap();
+    assert_eq!(
+        discover(dir.to_str().unwrap(), None)
+            .unwrap()
+            .branch
+            .as_deref(),
+        Some("feature/ports")
+    );
+    fs::write(dir.join("git-metadata/HEAD"), "abcdef0123456789\n").unwrap();
+    assert_eq!(
+        discover(dir.to_str().unwrap(), None)
+            .unwrap()
+            .branch
+            .as_deref(),
+        Some("detached:abcdef0")
+    );
+    fs::write(dir.join("git-metadata/HEAD"), "a".repeat(4097)).unwrap();
+    assert!(
+        discover(dir.to_str().unwrap(), None)
+            .unwrap()
+            .branch
+            .is_none()
+    );
     fs::write(dir.join("package.json"), "broken").unwrap();
     fs::write(dir.join("Cargo.toml"), "").unwrap();
     assert!(discover(dir.to_str().unwrap(), None).is_some());

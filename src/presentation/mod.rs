@@ -1,7 +1,11 @@
 pub mod cli;
 pub mod components;
+pub mod console;
 pub mod design;
+pub mod grouping;
+pub mod i18n;
 pub mod json;
 pub mod runtime;
 pub mod state;
+pub mod tasks;
 pub mod view;

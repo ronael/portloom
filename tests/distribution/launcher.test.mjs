@@ -21,5 +21,5 @@ test('npm symlinks, paths with spaces, literal arguments and exit status survive
 }));
 test('unsupported platform fails visibly before trying another binary',()=>fixture(dir=>{
   const mock=path.join(dir,'mock');mkdirSync(mock);writeFileSync(path.join(mock,'uname'),'#!/bin/sh\necho Unknown\n');chmodSync(path.join(mock,'uname'),0o755);
-  const result=spawnSync(path.join(dir,'links/portloom'),[],{encoding:'utf8',env:{...process.env,PATH:`${mock}:${process.env.PATH}`}});assert.equal(result.status,1);assert.match(result.stderr,/pas pris en charge/);
+  const result=spawnSync(path.join(dir,'links/portloom'),[],{encoding:'utf8',env:{...process.env,PATH:`${mock}:${process.env.PATH}`}});assert.equal(result.status,1);assert.match(result.stderr,/unsupported system/);
 }));

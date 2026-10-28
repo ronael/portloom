@@ -1,16 +1,12 @@
 use super::{
+    i18n::{Locale, T},
     state::{Action, Overlay, State},
+    tasks::{Job, Reply, Services, worker},
     view,
 };
 use crate::{
-    application::{
-        ports::{AppResult, PortScanner},
-        stop::{StopPlan, StopProcess, StopResult},
-    },
-    domain::{
-        model::{Endpoint, Snapshot},
-        policy::Actor,
-    },
+    application::{ports::AppResult, preferences::Language},
+    domain::policy::Actor,
 };
 use crossterm::{
     event::{
@@ -26,41 +22,9 @@ use std::{
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
-        mpsc::{self, Receiver, Sender},
     },
-    thread,
     time::{Duration, Instant},
 };
-enum Job {
-    Scan,
-    Prepare(Box<Endpoint>, bool),
-    Execute(Box<StopPlan>, String),
-}
-enum Reply {
-    Scan(AppResult<Snapshot>),
-    Prepare(AppResult<Box<StopPlan>>),
-    Execute(AppResult<StopResult>),
-}
-fn worker(
-    scanner: Arc<dyn PortScanner>,
-    stopper: Arc<StopProcess>,
-) -> (Sender<Job>, Receiver<Reply>) {
-    let (send, jobs) = mpsc::channel();
-    let (replies, recv) = mpsc::channel();
-    thread::spawn(move || {
-        while let Ok(job) = jobs.recv() {
-            let reply = match job {
-                Job::Scan => Reply::Scan(scanner.scan()),
-                Job::Prepare(e, force) => Reply::Prepare(stopper.prepare(&e, force).map(Box::new)),
-                Job::Execute(plan, ack) => Reply::Execute(stopper.execute(&plan, &ack)),
-            };
-            if replies.send(reply).is_err() {
-                break;
-            }
-        }
-    });
-    (send, recv)
-}
 struct TerminalGuard;
 impl Drop for TerminalGuard {
     fn drop(&mut self) {
@@ -74,17 +38,17 @@ impl Drop for TerminalGuard {
         let _ = disable_raw_mode();
     }
 }
-pub fn run(
-    scanner: Arc<dyn PortScanner>,
-    stopper: Arc<StopProcess>,
-    actor: Actor,
-    demo: bool,
-    interval: u64,
-) -> AppResult<()> {
+pub struct Options {
+    pub actor: Actor,
+    pub demo: bool,
+    pub interval: u64,
+    pub locale: Locale,
+    pub first_language: Option<Language>,
+    pub port: Option<u16>,
+}
+pub fn run(services: Services, options: Options) -> AppResult<()> {
     if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
-        return Err(
-            "L’interface exige un terminal interactif. Utilise --json dans un script.".into(),
-        );
+        return Err(options.locale.text(T::TtyRequired).into());
     }
     let quit = Arc::new(AtomicBool::new(false));
     let mut registrations = Vec::new();
@@ -96,20 +60,13 @@ pub fn run(
         registrations
             .push(signal_hook::flag::register(signal, quit.clone()).map_err(|e| e.to_string())?);
     }
-    let result = event_loop(scanner, stopper, actor, demo, interval, quit);
+    let result = event_loop(services, options, quit);
     for id in registrations {
         signal_hook::low_level::unregister(id);
     }
-    result.map_err(|e| e.to_string())
+    result.map_err(|e| e.to_string().into())
 }
-fn event_loop(
-    scanner: Arc<dyn PortScanner>,
-    stopper: Arc<StopProcess>,
-    actor: Actor,
-    demo: bool,
-    interval: u64,
-    quit: Arc<AtomicBool>,
-) -> io::Result<()> {
+fn event_loop(services: Services, options: Options, quit: Arc<AtomicBool>) -> io::Result<()> {
     enable_raw_mode()?;
     let _guard = TerminalGuard;
     execute!(
@@ -119,8 +76,14 @@ fn event_loop(
         EnableBracketedPaste
     )?;
     let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
-    let (jobs, replies) = worker(scanner, stopper);
-    let mut state = State::new(actor, demo);
+    let (jobs, replies) = worker(services);
+    let mut state = State::new(options.actor, options.demo);
+    state.locale = options.locale;
+    state.notice = state.locale.text(T::Reading).into();
+    state.fixed_port = options.port;
+    if let Some(selected) = options.first_language {
+        state.overlay = Overlay::Language { selected };
+    }
     let mut last_scan = Instant::now();
     let mut refresh = true;
     let mut dirty = true;
@@ -131,14 +94,14 @@ fn event_loop(
             match reply {
                 Reply::Scan(Ok(snapshot)) => {
                     state.apply(snapshot);
-                    if state.notice == "Lecture des ports…" {
-                        state.message("Sélectionne un port pour comprendre son usage.", false);
+                    if state.notice == state.locale.text(T::Reading) {
+                        state.message(state.locale.text(T::SelectPort), false);
                     }
                     last_scan = Instant::now();
                 }
                 Reply::Scan(Err(e)) => {
                     state.stale = true;
-                    state.message(e, true);
+                    state.message(state.locale.error(&e), true);
                     last_scan = Instant::now();
                 }
                 Reply::Prepare(Ok(plan)) => {
@@ -147,14 +110,31 @@ fn event_loop(
                         input: String::new(),
                         scroll: 0,
                     };
-                    state.message("Vérifie les ports concernés avant de confirmer.", false);
+                    state.message(state.locale.text(T::ReviewPorts), false);
                 }
-                Reply::Prepare(Err(e)) => state.message(e, true),
+                Reply::Prepare(Err(e)) => state.message(state.locale.error(&e), true),
+                Reply::Web(result) => match result {
+                    Ok(report) => state.web_result(*report),
+                    Err(e) => state.message(state.locale.error(&e), true),
+                },
+                Reply::Language(language, result) => {
+                    state.set_language(language);
+                    if let Err(e) = result {
+                        state.message(
+                            format!(
+                                "{} {}",
+                                state.locale.text(T::LanguageSession),
+                                state.locale.error(&e)
+                            ),
+                            true,
+                        );
+                    }
+                }
                 Reply::Execute(result) => {
                     state.overlay = Overlay::None;
                     match result {
                         Ok(r) => state.stop_result(r),
-                        Err(e) => state.message(e, true),
+                        Err(e) => state.message(state.locale.error(&e), true),
                     };
                     refresh = true;
                 }
@@ -163,7 +143,8 @@ fn event_loop(
         if !state.busy
             && matches!(state.overlay, Overlay::None)
             && (refresh
-                || (!state.paused && last_scan.elapsed() >= Duration::from_millis(interval)))
+                || (!state.paused
+                    && last_scan.elapsed() >= Duration::from_millis(options.interval)))
         {
             jobs.send(Job::Scan).map_err(io::Error::other)?;
             state.busy = true;
@@ -230,7 +211,7 @@ fn event_loop(
                     }
                     MouseEventKind::Down(MouseButton::Left) if state.table_rect.contains(at) => {
                         let index = state.table.offset() + usize::from(at.y - state.table_rect.y);
-                        if index < state.visible.len() {
+                        if index < state.rows.len() {
                             state.table.select(Some(index));
                             state.detail_scroll = 0;
                         }
@@ -261,18 +242,37 @@ fn event_loop(
             Action::Quit => break,
             Action::Refresh => {
                 refresh = true;
-                state.message("Actualisation demandée.", false);
+                state.message(state.locale.text(T::RefreshRequested), false);
             }
             Action::Prepare(e, force) => {
                 state.busy = true;
-                state.message("Vérification du processus…", false);
+                state.message(state.locale.text(T::CheckingProcess), false);
                 jobs.send(Job::Prepare(e, force))
                     .map_err(io::Error::other)?;
             }
             Action::Execute(plan, ack) => {
                 state.busy = true;
-                state.message("Vérification puis envoi du signal…", false);
+                state.message(state.locale.text(T::SendingSignal), false);
                 jobs.send(Job::Execute(plan, ack))
+                    .map_err(io::Error::other)?;
+            }
+            Action::Web(endpoint, open) => {
+                state.busy = true;
+                state.message(
+                    state.locale.text(if open {
+                        T::HttpOpening
+                    } else {
+                        T::HttpChecking
+                    }),
+                    false,
+                );
+                jobs.send(Job::Web(endpoint, open))
+                    .map_err(io::Error::other)?;
+            }
+            Action::Language(language) => {
+                state.busy = true;
+                state.set_language(language);
+                jobs.send(Job::Language(language))
                     .map_err(io::Error::other)?;
             }
             Action::None => {}

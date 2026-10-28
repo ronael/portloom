@@ -1,11 +1,11 @@
-## Problème et comportement obtenu
+## Problem and resulting behavior
 
-<!-- Décrire un exemple concret et la solution. -->
+<!-- Describe a concrete example and the solution. -->
 
-## Vérifications
+## Validation
 
-<!-- Commandes exécutées, résultats et limites éventuelles. -->
+<!-- Commands run, results and remaining limitations. -->
 
-## Documentation ou compatibilité
+## Documentation or compatibility
 
-<!-- À compléter seulement si les commandes, protections ou plateformes changent. -->
+<!-- Complete only if commands, protections or supported platforms change. -->

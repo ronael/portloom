@@ -11,11 +11,11 @@ ROOT=$(CDPATH= cd "$(dirname "$SCRIPT")/.." && pwd)
 case "$(uname -s)-$(uname -m)" in
   Darwin-arm64) PLATFORM=darwin-arm64;; Darwin-x86_64) PLATFORM=darwin-x64;;
   Linux-aarch64) PLATFORM=linux-arm64;; Linux-x86_64) PLATFORM=linux-x64;;
-  *) printf '%s\n' 'Portloom : ce système n’est pas pris en charge (macOS ou Linux requis).' >&2; exit 1;;
+  *) printf '%s\n' 'Portloom: unsupported system (macOS or Linux required).' >&2; exit 1;;
 esac
 BINARY="$ROOT/native/$PLATFORM/portloom"
 if [ ! -x "$BINARY" ]; then
-  printf 'Portloom : cette distribution ne contient pas le binaire %s.\n' "$PLATFORM" >&2
+  printf 'Portloom: this distribution does not include the %s binary.\n' "$PLATFORM" >&2
   exit 1
 fi
 exec "$BINARY" "$@"

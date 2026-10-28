@@ -2,7 +2,7 @@ use crate::domain::{
     assessment::{Kind, assess},
     policy::blocked,
 };
-use crate::presentation::{design::*, state::State};
+use crate::presentation::{design::*, grouping::VisibleRow, i18n::T, state::State};
 use ratatui::{
     Frame,
     layout::{Constraint, Rect},
@@ -25,7 +25,12 @@ pub fn render(frame: &mut Frame, state: &mut State, area: Rect) {
         .style(style(TEXT).bg(SURFACE))
         .title(
             Line::from(format!(
-                " PORTS EN ÉCOUTE  {} / {} ",
+                " {}  {} / {} ",
+                state.locale.text(if state.grouped {
+                    T::Projects
+                } else {
+                    T::Listeners
+                }),
                 state.visible.len(),
                 state.snapshot.endpoints.len()
             ))
@@ -42,24 +47,62 @@ pub fn render(frame: &mut Frame, state: &mut State, area: Rect) {
     state.page_size = state.table_rect.height as usize;
     let title_width = inner.width.saturating_sub(31) as usize;
     let rows = state
-        .visible
+        .rows
         .iter()
-        .map(|index| {
-            let e = &state.snapshot.endpoints[*index];
+        .map(|row| {
+            let index = match row {
+                VisibleRow::Group(group) => {
+                    let expanded =
+                        !state.query.is_empty() || !state.collapsed.contains(&group.root);
+                    let branch = group
+                        .endpoints
+                        .first()
+                        .and_then(|i| state.snapshot.endpoints[*i].process.project.as_ref())
+                        .and_then(|p| p.branch.as_deref());
+                    let name = match branch {
+                        Some(branch) => format!("{} · {branch}", group.name),
+                        None => group.name.clone(),
+                    };
+                    return Row::new(vec![
+                        Cell::from(if expanded { "▾" } else { "▸" }),
+                        Cell::from(""),
+                        Cell::from(if state.locale == crate::presentation::i18n::Locale::FR {
+                            "PROJET"
+                        } else {
+                            "PROJECT"
+                        }),
+                        Cell::from(fit(&name, title_width)),
+                        Cell::from(format!(
+                            "{} {}",
+                            group.endpoints.len(),
+                            if group.endpoints.len() == 1 {
+                                "port"
+                            } else {
+                                "ports"
+                            }
+                        )),
+                    ])
+                    .style(style(ACCENT).bg(RAISED).add_modifier(Modifier::BOLD));
+                }
+                VisibleRow::Endpoint(index) => *index,
+            };
+            let e = &state.snapshot.endpoints[index];
             let a = assess(&e.process);
+            let text = state.locale.assessment(&a);
+            let protected = blocked(&e.process, &state.actor).is_some();
             let action = if blocked(&e.process, &state.actor).is_some() {
-                "PROTÉGÉ"
+                state.locale.text(T::Protected)
             } else if a.needs_pid {
-                "PRUDENCE"
+                state.locale.text(T::Caution)
             } else {
-                "CONFIRMER"
+                state.locale.text(T::Confirm)
             };
             Row::new(vec![
                 Cell::from(format!("{}", e.port)).style(style(TEXT).add_modifier(Modifier::BOLD)),
                 Cell::from(e.protocol.label()).style(style(SUBTLE)),
-                Cell::from(a.badge).style(style(kind_color(a.kind))),
+                Cell::from(text.badge).style(style(kind_color(a.kind))),
                 Cell::from(fit(&a.title, title_width)),
-                Cell::from(action).style(style(if action == "PROTÉGÉ" {
+                Cell::from(action).style(style(if protected {
                     SUBTLE
                 } else if a.needs_pid {
                     WARNING
@@ -81,18 +124,24 @@ pub fn render(frame: &mut Frame, state: &mut State, area: Rect) {
     )
     .column_spacing(1)
     .header(
-        Row::new(["PORT", "NET", "USAGE", "PROJET / SERVICE", "ARRÊT"])
-            .style(style(SUBTLE))
-            .bottom_margin(1),
+        Row::new([
+            "PORT",
+            "NET",
+            state.locale.text(T::Usage),
+            state.locale.text(T::ProjectService),
+            state.locale.text(T::Stop),
+        ])
+        .style(style(SUBTLE))
+        .bottom_margin(1),
     )
     .row_highlight_style(style(TEXT).bg(SELECTED));
     frame.render_stateful_widget(table, inner, &mut state.table);
     if state.visible.is_empty() {
         frame.render_widget(
             Paragraph::new(if state.busy {
-                "Lecture des ports…"
+                state.locale.text(T::Reading)
             } else {
-                "Aucun port dans cette vue.\n0 : tout afficher · Échap : effacer le filtre"
+                state.locale.text(T::Empty)
             })
             .style(style(MUTED)),
             state.table_rect,

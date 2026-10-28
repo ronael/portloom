@@ -19,7 +19,7 @@ def run_case(exit_kind):
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 40, 140, 0, 0))
     original = termios.tcgetattr(slave)
     start = time.monotonic()
-    proc = subprocess.Popen([str(ROOT / 'bin/portloom'), '--demo'], stdin=slave,
+    proc = subprocess.Popen([str(ROOT / 'bin/portloom'), '--demo', '--lang', 'en'], stdin=slave,
                             stdout=slave, stderr=slave, start_new_session=True,
                             env={**os.environ, 'TERM': 'xterm-256color', 'COLORTERM': 'truecolor'})
     data = bytearray()
@@ -37,20 +37,20 @@ def run_case(exit_kind):
                     break
                 data.extend(chunk)
         if needle not in data:
-            raise AssertionError(f'Missing terminal output: {needle!r}; process status {proc.poll()}')
+            raise AssertionError(f'Missing terminal output: {needle!r}; process status {proc.poll()}; recent output {bytes(data[-3000:])!r}')
 
     try:
-        expect(b'SITE/API')
+        expect(b'WEB/API')
         first_frame_ms = round((time.monotonic() - start) * 1000, 2)
         process = subprocess.check_output(['ps', '-p', str(proc.pid), '-o', 'rss=,comm='], text=True).strip().split(None, 1)
         assert Path(process[1]).name == 'portloom', process
         if exit_kind == 'keyboard':
             data.clear()
             os.write(master, b'k')
-            expect('CONFIRMER L’ARRÊT'.encode())
-            os.write(master, b'o')
+            expect(b'CONFIRM STOP')
+            os.write(master, b'y')
             # Ratatui sends only changed cells, so unchanged letters are absent.
-            expect(b'Simulation :')
+            expect(b'Simulat')
             expect(b'9 ports ')
             os.write(master, b'q')
         elif exit_kind == 'ctrl-c':

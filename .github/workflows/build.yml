@@ -43,6 +43,7 @@ jobs:
       - run: npm run verify
       - run: sh scripts/dev/build.sh ${{ matrix.target }}
       - run: python3 scripts/dev/terminal_smoke.py
+      - run: python3 scripts/dev/language_smoke.py
       - run: node scripts/release/pack.mjs --platforms=${{ matrix.platform }}
       - run: node scripts/release/smoke.mjs
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -26,6 +26,7 @@ fn motion_has_still_intervals_and_reduced_motion_is_time_independent() {
         AvatarFrame::at(Mood::Idle, true, 3000)
     );
     assert_eq!(AvatarFrame::at(Mood::Idle, true, 3250).pose, Pose::Blink);
+    assert_eq!(AvatarFrame::at(Mood::Idle, true, 900).pose, Pose::Wink);
     assert_ne!(
         AvatarFrame::at(Mood::Working, true, 0),
         AvatarFrame::at(Mood::Working, true, 180)

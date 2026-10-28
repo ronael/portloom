@@ -8,14 +8,15 @@ pub const WIDTH: u16 = 9;
 pub const HEIGHT: u16 = 3;
 type Pixels = [[u8; WIDTH as usize * 2]; HEIGHT as usize * 2];
 
-// Quarter-cell pixels give the compact silhouette thin eyes, contours and feet.
+// A broad shell leaves room for the face; hands move outside its contour.
+// Quarter-cell pixels keep the rounded corners and contact-pin feet compact.
 const BODY: Pixels = [
-    *b"........##........",
-    *b"....##x####x##....",
-    *b"..####x####x####..",
-    *b"########xx########",
-    *b"....##########....",
-    *b".....##....##.....",
+    *b"...############...",
+    *b"..###xx####xx###..",
+    *b"..###xx####xx###..",
+    *b"##################",
+    *b"...############...",
+    *b"....##......##....",
 ];
 const QUADRANTS: [&str; 16] = [
     " ", "▘", "▝", "▀", "▖", "▌", "▞", "▛", "▗", "▚", "▐", "▜", "▄", "▙", "▟", "█",
@@ -23,47 +24,46 @@ const QUADRANTS: [&str; 16] = [
 
 fn pixels(frame: AvatarFrame) -> Pixels {
     let mut pixels = BODY;
-    if matches!(frame.pose, Pose::Blink | Pose::LookLeft | Pose::LookRight) {
+    if matches!(
+        frame.pose,
+        Pose::Blink | Pose::Wink | Pose::LookLeft | Pose::LookRight
+    ) {
         for row in pixels.iter_mut().take(3).skip(1) {
             row[4..14].fill(b'#');
         }
-        if frame.pose == Pose::Blink {
-            for x in [5, 6, 11, 12] {
-                pixels[2][x] = b'x';
-            }
-        } else {
-            let eyes = if frame.pose == Pose::LookLeft {
-                [5, 10]
-            } else {
-                [7, 12]
-            };
-            for x in eyes {
-                pixels[1][x] = b'x';
-                pixels[2][x] = b'x';
+        let eyes = match frame.pose {
+            Pose::LookLeft => [4, 10],
+            Pose::LookRight => [6, 12],
+            _ => [5, 11],
+        };
+        for (index, x) in eyes.into_iter().enumerate() {
+            pixels[2][x..x + 2].fill(b'x');
+            if frame.pose != Pose::Blink && !(frame.pose == Pose::Wink && index == 0) {
+                pixels[1][x..x + 2].fill(b'x');
             }
         }
     }
     match frame.pose {
         Pose::WaveLow | Pose::WaveHigh => {
-            pixels[3][0..4].fill(b'.');
-            pixels[2][0..4].fill(b'#');
-            pixels[1][0..2].fill(b'#');
+            pixels[3][0..2].fill(b'.');
+            pixels[2][0..2].fill(b'#');
+            pixels[1][0] = b'#';
             if frame.pose == Pose::WaveHigh {
-                pixels[0][0..2].fill(b'#');
+                pixels[0][0] = b'#';
             }
         }
         Pose::StepLeft => {
-            pixels[5][5..7].fill(b'.');
-            pixels[5][4..6].fill(b'#');
+            pixels[5][4..6].fill(b'.');
+            pixels[5][3..5].fill(b'#');
         }
         Pose::StepRight => {
-            pixels[5][11..13].fill(b'.');
-            pixels[5][12..14].fill(b'#');
+            pixels[5][12..14].fill(b'.');
+            pixels[5][13..15].fill(b'#');
         }
         _ => {}
     }
     if matches!(frame.mood, Mood::Warning | Mood::Danger) {
-        pixels[3][7..11].fill(b'x');
+        pixels[3][8..10].fill(b'x');
     }
     pixels
 }
@@ -94,19 +94,19 @@ pub fn render(frame: &mut Frame, avatar: AvatarFrame, area: Rect) {
                     mask |= bit;
                 }
             }
-            let color = if avatar.pulse && y == 0 && x == 4 {
-                TEXT
-            } else if y == 0 || x <= 1 {
-                mix(body, TEXT)
-            } else if y == 2 || x >= 7 {
-                mix(body, CANVAS)
-            } else {
-                body
+            let light = mix(body, TEXT);
+            let shade = mix(body, CANVAS);
+            let (glyph, foreground, background) = match (y, mask) {
+                // Two ink colors within a full cell give the brow a thin highlight.
+                (0, 15) => ("▀", if avatar.pulse && x == 4 { TEXT } else { light }, body),
+                (2, 15) => ("▀", body, shade),
+                (2, _) => (QUADRANTS[mask], shade, CANVAS),
+                _ => (QUADRANTS[mask], body, CANVAS),
             };
             frame.buffer_mut()[(area.x + x, area.y + y)]
-                .set_symbol(QUADRANTS[mask])
-                .set_fg(color)
-                .set_bg(CANVAS);
+                .set_symbol(glyph)
+                .set_fg(foreground)
+                .set_bg(background);
         }
     }
 }

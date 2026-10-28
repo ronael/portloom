@@ -79,9 +79,9 @@ fn header(frame: &mut Frame, state: &State, area: Rect) {
         Rect::new(area.x, area.y, mascot::WIDTH, mascot::HEIGHT),
     );
     let area = Rect::new(
-        area.x + 15,
+        area.x + 11,
         area.y + 1,
-        area.width.saturating_sub(15),
+        area.width.saturating_sub(11),
         area.height.saturating_sub(1),
     );
     let mode = if state.demo {

@@ -4,70 +4,66 @@ use crate::presentation::{
 };
 use ratatui::{Frame, layout::Rect, style::Color};
 
-pub const WIDTH: u16 = 13;
-pub const HEIGHT: u16 = 4;
-type Pixels = [[u8; WIDTH as usize]; HEIGHT as usize * 2];
+pub const WIDTH: u16 = 9;
+pub const HEIGHT: u16 = 3;
+type Pixels = [[u8; WIDTH as usize * 2]; HEIGHT as usize * 2];
 
-// Two square pixels per terminal cell: a solid shell, antenna, eyes, arms and pins.
+// Quarter-cell pixels give the compact silhouette thin eyes, contours and feet.
 const BODY: Pixels = [
-    *b".....+#+.....",
-    *b"...+#####+...",
-    *b"..+#######=..",
-    *b".+##xx#xx##=.",
-    *b"==##xx#xx##==",
-    *b"..=###x###=..",
-    *b"...=#...#=...",
-    *b".............",
+    *b"........##........",
+    *b"....##x####x##....",
+    *b"..####x####x####..",
+    *b"########xx########",
+    *b"....##########....",
+    *b".....##....##.....",
+];
+const QUADRANTS: [&str; 16] = [
+    " ", "▘", "▝", "▀", "▖", "▌", "▞", "▛", "▗", "▚", "▐", "▜", "▄", "▙", "▟", "█",
 ];
 
 fn pixels(frame: AvatarFrame) -> Pixels {
     let mut pixels = BODY;
     if matches!(frame.pose, Pose::Blink | Pose::LookLeft | Pose::LookRight) {
-        for row in pixels.iter_mut().take(5).skip(3) {
-            row[3..10].fill(b'#');
+        for row in pixels.iter_mut().take(3).skip(1) {
+            row[4..14].fill(b'#');
         }
-        let eyes = match frame.pose {
-            Pose::LookLeft => [3, 4, 6, 7],
-            Pose::LookRight => [5, 6, 8, 9],
-            _ => [4, 5, 7, 8],
-        };
-        for x in eyes {
-            pixels[4][x] = b'x';
-            if frame.pose != Pose::Blink {
-                pixels[3][x] = b'x';
+        if frame.pose == Pose::Blink {
+            for x in [5, 6, 11, 12] {
+                pixels[2][x] = b'x';
+            }
+        } else {
+            let eyes = if frame.pose == Pose::LookLeft {
+                [5, 10]
+            } else {
+                [7, 12]
+            };
+            for x in eyes {
+                pixels[1][x] = b'x';
+                pixels[2][x] = b'x';
             }
         }
     }
     match frame.pose {
         Pose::WaveLow | Pose::WaveHigh => {
-            pixels[4][0..2].fill(b'.');
-            pixels[3][0..2].fill(b'#');
-            pixels[2][0] = b'+';
-            pixels[2][1] = b'#';
+            pixels[3][0..4].fill(b'.');
+            pixels[2][0..4].fill(b'#');
+            pixels[1][0..2].fill(b'#');
             if frame.pose == Pose::WaveHigh {
-                pixels[1][0] = b'+';
-                pixels[1][1] = b'#';
+                pixels[0][0..2].fill(b'#');
             }
         }
         Pose::StepLeft => {
-            pixels[6][3..5].fill(b'.');
-            pixels[6][2..4].fill(b'#');
+            pixels[5][5..7].fill(b'.');
+            pixels[5][4..6].fill(b'#');
         }
         Pose::StepRight => {
-            pixels[6][8..10].fill(b'.');
-            pixels[6][9..11].fill(b'#');
+            pixels[5][11..13].fill(b'.');
+            pixels[5][12..14].fill(b'#');
         }
         _ => {}
     }
     if matches!(frame.mood, Mood::Warning | Mood::Danger) {
-        for row in pixels.iter_mut().take(5).skip(3) {
-            row[5] = b'#';
-            row[7] = b'#';
-        }
-        pixels[5][5..8].fill(b'x');
-    }
-    if frame.pulse {
-        pixels[0][6] = b'*';
+        pixels[3][7..11].fill(b'x');
     }
     pixels
 }
@@ -86,25 +82,31 @@ pub fn render(frame: &mut Frame, avatar: AvatarFrame, area: Rect) {
         Mood::Paused => MUTED,
         _ => ACCENT,
     };
-    let color = |pixel| match pixel {
-        b'#' => body,
-        b'+' => mix(body, TEXT),
-        b'=' => mix(body, CANVAS),
-        b'*' => TEXT,
-        _ => CANVAS,
-    };
     let pixels = pixels(avatar);
     let area = area.intersection(frame.area());
     for y in 0..HEIGHT.min(area.height) {
         for x in 0..WIDTH.min(area.width) {
-            let top = color(pixels[usize::from(y) * 2][usize::from(x)]);
-            let bottom = color(pixels[usize::from(y) * 2 + 1][usize::from(x)]);
-            let cell = &mut frame.buffer_mut()[(area.x + x, area.y + y)];
-            if top == bottom {
-                cell.set_symbol(" ").set_bg(top);
-            } else {
-                cell.set_symbol("▀").set_fg(top).set_bg(bottom);
+            let px = usize::from(x) * 2;
+            let py = usize::from(y) * 2;
+            let mut mask = 0;
+            for (bit, dx, dy) in [(1, 0, 0), (2, 1, 0), (4, 0, 1), (8, 1, 1)] {
+                if pixels[py + dy][px + dx] == b'#' {
+                    mask |= bit;
+                }
             }
+            let color = if avatar.pulse && y == 0 && x == 4 {
+                TEXT
+            } else if y == 0 || x <= 1 {
+                mix(body, TEXT)
+            } else if y == 2 || x >= 7 {
+                mix(body, CANVAS)
+            } else {
+                body
+            };
+            frame.buffer_mut()[(area.x + x, area.y + y)]
+                .set_symbol(QUADRANTS[mask])
+                .set_fg(color)
+                .set_bg(CANVAS);
         }
     }
 }
